@@ -9,6 +9,7 @@ const FaceFilter = () => {
   const [loading, setLoading] = useState(true)
   const [arSystem, setArSystem] = useState(null)
   const faceMeshRef = useRef(null)
+  const [usingFrontCamera, setUsingFrontCamera] = useState(true)
 
   useEffect(() => {
     document.body.classList.add('unstyled')
@@ -17,13 +18,23 @@ const FaceFilter = () => {
     }
   }, [])
 
-  useEffect(() => {
-    const initFaceFilter = async () => {
+  const startAR = async (useFrontCamera = true) => {
+    // Detener el sistema AR anterior si existe
+    if (arSystem) {
+      arSystem.stop()
+      arSystem.renderer.dispose()
+    }
+
+    setLoading(true)
+
+    try {
       const mindarThree = new MindARThree({
         container: sceneRef.current,
         uiLoading: 'no',
         uiScanning: 'no',
         uiError: 'no',
+        // Especificar la cámara frontal o trasera
+        facingMode: useFrontCamera ? 'user' : 'environment',
       })
 
       const { renderer, scene, camera } = mindarThree
@@ -35,37 +46,44 @@ const FaceFilter = () => {
       camera.aspect = window.innerWidth / window.innerHeight
       camera.updateProjectionMatrix()
 
-      // Crear geometría facial básica
-      const geometry = new THREE.BufferGeometry()
-      const vertices = new Float32Array([
-        // Triángulo 1
-        -1, -1, 0, 1, -1, 0, 1, 1, 0,
-        // Triángulo 2
-        -1, -1, 0, 1, 1, 0, -1, 1, 0,
-      ])
-
-      const uvs = new Float32Array([
-        // UVs correspondientes
-        0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1,
-      ])
-
-      geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
-      geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
-
-      // Cargar textura PNG
+      // Crear una malla facial que se ajustará a la cara detectada
+      // En lugar de una geometría básica, usaremos los vértices proporcionados por MindAR
       const textureLoader = new THREE.TextureLoader()
       textureLoader.load('/mesh_map.png', (texture) => {
-        texture.flipY = false // Ajustar según necesidad de la textura
+        texture.flipY = false
 
+        // Material que utilizará la textura del filtro facial
         const material = new THREE.MeshBasicMaterial({
           map: texture,
           transparent: true,
+          opacity: 1.0,
           side: THREE.DoubleSide,
         })
 
-        faceMeshRef.current = new THREE.Mesh(geometry, material)
-        faceMeshRef.current.visible = false
-        scene.add(faceMeshRef.current)
+        // En lugar de crear nuestra propia geometría, vamos a esperar a que MindAR
+        // proporcione los puntos de referencia faciales
+        const faceMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(1, 1), // Geometría temporal
+          material
+        )
+
+        // Configuración inicial
+        faceMesh.position.set(0, 0, 0)
+        faceMesh.scale.set(1, 1, 1)
+        faceMesh.visible = false
+
+        // Guardar referencia
+        faceMeshRef.current = faceMesh
+
+        // Si el controlador facial está disponible, añadimos la malla
+        if (mindarThree.controller) {
+          const anchor = mindarThree.addFaceMesh()
+          anchor.group.add(faceMesh)
+        } else {
+          // Si no hay controlador facial, añadimos directamente a la escena
+          scene.add(faceMesh)
+        }
+
         setLoading(false)
       })
 
@@ -82,15 +100,12 @@ const FaceFilter = () => {
       await mindarThree.start()
 
       const update = () => {
-        if (!mindarThree.controller || !faceMeshRef.current) return
+        if (!mindarThree.controller) return
 
-        const { faceGeometry } = mindarThree.controller.currentFace || {}
-        faceMeshRef.current.visible = !!faceGeometry
+        const faceVisible = mindarThree.controller.visible
 
-        if (faceGeometry) {
-          faceMeshRef.current.position.copy(faceGeometry.position)
-          faceMeshRef.current.rotation.copy(faceGeometry.rotation)
-          faceMeshRef.current.scale.copy(faceGeometry.scale)
+        if (faceMeshRef.current) {
+          faceMeshRef.current.visible = faceVisible
         }
 
         renderer.render(scene, camera)
@@ -103,9 +118,14 @@ const FaceFilter = () => {
       return () => {
         window.removeEventListener('resize', onResize)
       }
+    } catch (error) {
+      console.error('Error al iniciar AR:', error)
+      setLoading(false)
     }
+  }
 
-    initFaceFilter()
+  useEffect(() => {
+    startAR(usingFrontCamera)
 
     return () => {
       if (arSystem) {
@@ -113,7 +133,11 @@ const FaceFilter = () => {
         arSystem.renderer.dispose()
       }
     }
-  }, [])
+  }, [usingFrontCamera]) // Reiniciar cuando cambie la cámara
+
+  const toggleCamera = () => {
+    setUsingFrontCamera(!usingFrontCamera)
+  }
 
   return (
     <div style={{ position: 'relative' }}>
@@ -142,10 +166,27 @@ const FaceFilter = () => {
           border: 'none',
           transition: 'background-color 0.3s',
         }}
-        onMouseOver={(e) => (e.target.style.backgroundColor = 'rgba(55, 65, 81, 0.8)')}
-        onMouseOut={(e) => (e.target.style.backgroundColor = 'rgba(31, 41, 55, 0.8)')}
       >
         Volver al Selector
+      </button>
+
+      <button
+        onClick={toggleCamera}
+        style={{
+          position: 'absolute',
+          bottom: '16px',
+          right: '16px',
+          zIndex: 50,
+          padding: '8px 16px',
+          backgroundColor: 'rgba(31, 41, 55, 0.8)',
+          color: 'white',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          border: 'none',
+          transition: 'background-color 0.3s',
+        }}
+      >
+        {usingFrontCamera ? 'Cambiar a Cámara Trasera' : 'Cambiar a Cámara Frontal'}
       </button>
 
       {loading && (
