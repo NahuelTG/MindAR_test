@@ -8,10 +8,10 @@ export const Selector = () => {
       <h1 className="text-3xl font-bold">Elige la experiencia</h1>
       <div className="flex gap-4">
         <button
-          onClick={() => navigate('/Steve')}
+          onClick={() => navigate('/Bee')}
           className="px-6 py-3 bg-blue-600 text-white rounded-2xl shadow hover:bg-blue-700 transition"
         >
-          Steve AR
+          Bee AR
         </button>
         <button
           onClick={() => navigate('/b')}
