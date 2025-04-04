@@ -18,7 +18,7 @@ const ARScene = () => {
     const loadModel = async () => {
       const loader = new GLTFLoader()
       loader.load(
-        '/steve.glb', // Ruta a tu modelo 3D
+        '/bee.glb', // Ruta a tu modelo 3D
         (gltf) => {
           setModel(gltf.scene)
           gltf.scene.visible = false
