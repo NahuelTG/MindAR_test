@@ -8,7 +8,12 @@ const ARScene = () => {
   const [loading, setLoading] = useState(true)
   const [model, setModel] = useState(null)
   const mixerRef = useRef(null)
-
+  useEffect(() => {
+    document.body.classList.add('unstyled')
+    return () => {
+      document.body.classList.remove('unstyled')
+    }
+  }, [])
   useEffect(() => {
     const loadModel = async () => {
       const loader = new GLTFLoader()
