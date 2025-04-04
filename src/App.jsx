@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router'
 import { Selector } from './assets/components/Selector.jsx'
-// import { ComponenteA } from './ComponenteA'
+import ARScene from './assets/components/ARScene.jsx'
 // import { ComponenteB } from './ComponenteB'
 import './App.css'
 
@@ -9,8 +9,8 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Selector />} />
-        {/* <Route path="/a" element={<ComponenteA />} />
-        <Route path="/b" element={<ComponenteB />} /> */}
+        <Route path="/Steve" element={<ARScene />} />
+        {/* <Route path="/b" element={<ComponenteB />} /> */}
       </Routes>
     </Router>
   )

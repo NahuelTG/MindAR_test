@@ -7,7 +7,10 @@ export const Selector = () => {
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-gray-100">
       <h1 className="text-3xl font-bold">Elige la experiencia AR</h1>
       <div className="flex gap-4">
-        <button onClick={() => navigate('/a')} className="px-6 py-3 bg-blue-600 text-white rounded-2xl shadow hover:bg-blue-700 transition">
+        <button
+          onClick={() => navigate('/Steve')}
+          className="px-6 py-3 bg-blue-600 text-white rounded-2xl shadow hover:bg-blue-700 transition"
+        >
           Steve AR
         </button>
         <button
