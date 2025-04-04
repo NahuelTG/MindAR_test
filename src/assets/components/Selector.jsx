@@ -5,7 +5,7 @@ export const Selector = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-gray-100">
-      <h1 className="text-3xl font-bold">Elige la experiencia AR</h1>
+      <h1 className="text-3xl font-bold">Elige la experiencia</h1>
       <div className="flex gap-4">
         <button
           onClick={() => navigate('/Steve')}
