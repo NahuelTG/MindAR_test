@@ -9,7 +9,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Selector />} />
-        <Route path="/Steve" element={<ARScene />} />
+        <Route path="/Bee" element={<ARScene />} />
         {/* <Route path="/b" element={<ComponenteB />} /> */}
       </Routes>
     </Router>
