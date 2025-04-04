@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "postinstall": "node mindar.patch.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.2",
@@ -18,7 +17,7 @@
     "react-dom": "^19.0.0",
     "react-router": "^7.4.1",
     "tailwindcss": "^4.1.2",
-    "three": "^0.175.0"
+    "three": "^0.150.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import * as THREE from 'three'
-import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
+import { MindARThree } from 'mind-ar/dist/mindar-face-three.prod.js'
 
 const FaceFilter = () => {
   const navigate = useNavigate()
