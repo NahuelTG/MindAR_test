@@ -8,30 +8,39 @@ const ARScene = () => {
   const [loading, setLoading] = useState(true)
   const [model, setModel] = useState(null)
   const mixerRef = useRef(null)
+  const clockRef = useRef(new THREE.Clock())
+
   useEffect(() => {
     document.body.classList.add('unstyled')
     return () => {
       document.body.classList.remove('unstyled')
     }
   }, [])
+
   useEffect(() => {
     const loadModel = async () => {
       const loader = new GLTFLoader()
-      loader.load(
-        '/bee.glb', // Ruta a tu modelo 3D
-        (gltf) => {
-          setModel(gltf.scene)
-          gltf.scene.visible = false
+      loader.load('/bee.glb', (gltf) => {
+        const model = gltf.scene
 
-          // Configura animaciones
-          mixerRef.current = new THREE.AnimationMixer(gltf.scene)
+        // Ajustes iniciales del modelo
+        model.scale.set(0.1, 0.1, 0.1)
+        model.position.set(0, 0, 0)
+        model.rotation.y = Math.PI / 2
+
+        // Configuración de animaciones
+        if (gltf.animations.length > 0) {
+          mixerRef.current = new THREE.AnimationMixer(model)
           gltf.animations.forEach((clip) => {
-            mixerRef.current.clipAction(clip).play()
+            const action = mixerRef.current.clipAction(clip)
+            action.timeScale = 0.5
+            action.play()
           })
-
-          setLoading(false)
         }
-      )
+
+        setModel(model)
+        setLoading(false)
+      })
     }
 
     loadModel()
@@ -43,12 +52,12 @@ const ARScene = () => {
     const startMindAR = async () => {
       const mindarThree = new MindARThree({
         container: sceneRef.current,
-        imageTargetSrc: '/targets.mind', // Ruta a tu archivo .mind
+        imageTargetSrc: '/targets.mind',
       })
 
       const { renderer, scene, camera } = mindarThree
 
-      // Configura iluminación
+      // Configuración de iluminación
       const ambientLight = new THREE.AmbientLight(0xffffff, 1)
       scene.add(ambientLight)
 
@@ -56,38 +65,55 @@ const ARScene = () => {
       directionalLight.position.set(0, 1, 0)
       scene.add(directionalLight)
 
-      // Añade modelo 3D
+      // Añadir modelo al anchor
       const anchor = mindarThree.addAnchor(0)
       anchor.group.add(model)
 
-      // Maneja eventos de detección
+      // Manejo de eventos de detección
       anchor.onTargetFound = () => {
         model.visible = true
+        clockRef.current.start() // Reiniciar el reloj al detectar
       }
       anchor.onTargetLost = () => {
         model.visible = false
+        clockRef.current.stop()
       }
 
-      // Inicia el motor AR
+      // Iniciar AR
       await mindarThree.start()
+
+      // Configurar el bucle de animación único
       renderer.setAnimationLoop(() => {
-        if (mixerRef.current) mixerRef.current.update(0.0167)
+        const delta = clockRef.current.getDelta()
+
+        // Actualizar animaciones del modelo
+        if (mixerRef.current) {
+          mixerRef.current.update(delta)
+        }
+
+        // Rotación continua sobre el eje Y
+        model.rotation.y += (delta * Math.PI) / 2 // Ajustar velocidad aquí
+
         renderer.render(scene, camera)
       })
 
-      // Maneja redimensionado
-      window.addEventListener('resize', () => {
+      // Manejo de redimensionado
+      const onResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight
         camera.updateProjectionMatrix()
         renderer.setSize(window.innerWidth, window.innerHeight)
-      })
+      }
+      window.addEventListener('resize', onResize)
+
+      // Limpieza
+      return () => {
+        window.removeEventListener('resize', onResize)
+        renderer.setAnimationLoop(null)
+        mindarThree.stop()
+      }
     }
 
     startMindAR()
-
-    return () => {
-      window.location.reload() // Limpieza básica para prevenir memory leaks
-    }
   }, [loading, model])
 
   return (
