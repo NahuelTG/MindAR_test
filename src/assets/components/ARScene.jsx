@@ -52,7 +52,7 @@ const ARScene = () => {
     const startMindAR = async () => {
       const mindarThree = new MindARThree({
         container: sceneRef.current,
-        imageTargetSrc: '/targets.mind',
+        imageTargetSrc: '/bee.mind',
       })
 
       const { renderer, scene, camera } = mindarThree
