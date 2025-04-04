@@ -14,7 +14,7 @@ export const Selector = () => {
           Bee AR
         </button>
         <button
-          onClick={() => navigate('/b')}
+          onClick={() => navigate('/Filter')}
           className="px-6 py-3 bg-green-600 text-white rounded-2xl shadow hover:bg-green-700 transition"
         >
           Filtro
