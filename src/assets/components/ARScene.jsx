@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router'
 import { ARManager } from '../ar/ARManager'
 import { modelConfigs } from '../ar/models/modelConfigs'
 import LoadingScreen from './LoadingScreen'
+import ARControlsInfo from './ARControlsInfo'
 
 const ARScene = () => {
   const { modelType } = useParams()
@@ -15,6 +16,8 @@ const ARScene = () => {
     width: window.innerWidth,
     height: window.innerHeight,
   })
+  const [isStaticMode, setIsStaticMode] = useState(false)
+  const [isTargetFound, setIsTargetFound] = useState(false)
 
   // Función para manejar el redimensionamiento
   const handleResize = () => {
@@ -55,6 +58,11 @@ const ARScene = () => {
     const initAR = async () => {
       try {
         arManagerRef.current = new ARManager(sceneRef.current)
+
+        // Configurar callbacks para el estado del target
+        arManagerRef.current.onTargetFound = () => setIsTargetFound(true)
+        arManagerRef.current.onTargetLost = () => setIsTargetFound(false)
+
         await arManagerRef.current.initialize(modelType, dimensions)
         setLoading(false)
       } catch (err) {
@@ -71,13 +79,28 @@ const ARScene = () => {
         arManagerRef.current.cleanup()
       }
     }
-  }, [modelType, error])
+  }, [modelType, error, dimensions])
 
   const handleBackToHome = () => {
     if (arManagerRef.current) {
       arManagerRef.current.cleanup()
     }
     navigate('/')
+  }
+
+  const toggleStaticMode = () => {
+    if (arManagerRef.current) {
+      const newMode = !isStaticMode
+      setIsStaticMode(newMode)
+      arManagerRef.current.setStaticMode(newMode)
+    }
+  }
+
+  const resetObjectPosition = () => {
+    if (arManagerRef.current) {
+      arManagerRef.current.resetObjectPosition()
+      setIsStaticMode(false)
+    }
   }
 
   if (error) {
@@ -124,11 +147,50 @@ const ARScene = () => {
       <div className="absolute top-4 left-4 z-50 pointer-events-none">
         <button
           onClick={handleBackToHome}
-          className="px-3 py-2 sm:px-4 sm:py-2 bg-black bg-opacity-70 cursor-pointer text-white rounded-lg hover:bg-opacity-90 transition-all duration-200 backdrop-blur-sm pointer-events-auto shadow-lg border border-white border-opacity-20 text-sm sm:text-base"
+          className="px-3 py-2 sm:px-4 sm:py-2 bg-black bg-opacity-70 text-white rounded-lg hover:bg-opacity-90 transition-all duration-200 backdrop-blur-sm pointer-events-auto shadow-lg border border-white border-opacity-20 text-sm sm:text-base"
         >
           ← Volver
         </button>
       </div>
+
+      {/* Controles de modo AR */}
+      {!loading && (
+        <div className="absolute bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none">
+          <button
+            onClick={toggleStaticMode}
+            disabled={!isTargetFound && !isStaticMode}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 backdrop-blur-sm pointer-events-auto shadow-lg border border-white border-opacity-20 ${
+              isStaticMode
+                ? 'bg-green-600 bg-opacity-80 text-white hover:bg-green-700'
+                : 'bg-blue-600 bg-opacity-80 text-white hover:bg-blue-700'
+            } ${!isTargetFound && !isStaticMode ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            {isStaticMode ? '📍 Modo Fijo' : '🎯 Modo Tracking'}
+          </button>
+
+          {isStaticMode && (
+            <button
+              onClick={resetObjectPosition}
+              className="px-3 py-2 bg-red-600 bg-opacity-80 text-white rounded-lg hover:bg-red-700 transition-all duration-200 backdrop-blur-sm pointer-events-auto shadow-lg border border-white border-opacity-20 text-sm font-medium cursor-pointer"
+            >
+              🔄 Resetear
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Indicador de estado */}
+      {!loading && (
+        <div className="absolute top-4 right-4 z-50 pointer-events-none">
+          <div
+            className={`px-3 py-2 rounded-lg text-sm font-medium backdrop-blur-sm shadow-lg border border-white border-opacity-20 ${
+              isTargetFound ? 'bg-green-600 bg-opacity-80 text-white' : 'bg-red-600 bg-opacity-80 text-white'
+            }`}
+          >
+            {isTargetFound ? '✓ Patrón Detectado' : '✗ Buscando Patrón'}
+          </div>
+        </div>
+      )}
 
       {/* Overlay para debugging (opcional - quitar en producción) */}
 
