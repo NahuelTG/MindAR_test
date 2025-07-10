@@ -79,7 +79,7 @@ const ARScene = () => {
         arManagerRef.current.cleanup()
       }
     }
-  }, [modelType, error])
+  }, [modelType, error, dimensions])
 
   const handleBackToHome = () => {
     if (arManagerRef.current) {
