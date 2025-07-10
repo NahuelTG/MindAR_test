@@ -1,42 +1,99 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* Prevenir que el canvas de MindAR interfiera */
+#mindar-container canvas {
+  pointer-events: none !important;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Solo permitir interacción con el canvas de Three.js */
+#mindar-container canvas:last-child {
+  pointer-events: auto !important;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Añadir estos estilos a tu archivo CSS principal */
+
+/* Estilos para el modo AR */
+body.ar-active {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Asegurar que el contenedor AR ocupe toda la pantalla */
+.ar-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+  z-index: 1000;
+}
+
+/* Estilos para el video de la cámara */
+.ar-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  z-index: 1;
+}
+
+/* Estilos para el canvas de Three.js */
+.ar-container canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  z-index: 2;
+}
+
+/* Prevenir zoom en dispositivos móviles */
+.ar-container * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ar-container {
+    /* Asegurar que en móviles no haya scroll */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    /* Usar unidades de viewport que son más confiables en móviles */
+    min-height: 100vh !important;
+    max-height: 100vh !important;
   }
-  to {
-    transform: rotate(360deg);
+}
+
+/* Para dispositivos con notch */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .ar-container {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+/* Ocultar la barra de direcciones en móviles */
+@media screen and (max-width: 768px) {
+  .ar-container {
+    /* Utilizar la altura de la ventana real */
+    height: 100dvh !important; /* dynamic viewport height */
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
