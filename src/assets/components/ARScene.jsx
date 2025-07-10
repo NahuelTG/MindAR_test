@@ -1,7 +1,9 @@
+// src/components/ARScene.jsx
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { ARManager } from '../ar/ARManager'
 import { modelConfigs } from '../ar/models/modelConfigs'
+import { snapdom } from '@zumer/snapdom'
 import LoadingScreen from './LoadingScreen'
 import ARControlsInfo from './ARControlsInfo'
 
@@ -19,7 +21,6 @@ const ARScene = () => {
   const [isStaticMode, setIsStaticMode] = useState(false)
   const [isTargetFound, setIsTargetFound] = useState(false)
 
-  // Función para manejar el redimensionamiento
   const handleResize = () => {
     const newDimensions = {
       width: window.innerWidth,
@@ -27,7 +28,6 @@ const ARScene = () => {
     }
     setDimensions(newDimensions)
 
-    // Notificar al ARManager sobre el cambio de tamaño
     if (arManagerRef.current) {
       arManagerRef.current.handleResize(newDimensions.width, newDimensions.height)
     }
@@ -40,8 +40,6 @@ const ARScene = () => {
     }
 
     document.body.classList.add('ar-active')
-
-    // Añadir listener para resize
     window.addEventListener('resize', handleResize)
     window.addEventListener('orientationchange', handleResize)
 
@@ -58,11 +56,8 @@ const ARScene = () => {
     const initAR = async () => {
       try {
         arManagerRef.current = new ARManager(sceneRef.current)
-
-        // Configurar callbacks para el estado del target
         arManagerRef.current.onTargetFound = () => setIsTargetFound(true)
         arManagerRef.current.onTargetLost = () => setIsTargetFound(false)
-
         await arManagerRef.current.initialize(modelType, dimensions)
         setLoading(false)
       } catch (err) {
@@ -103,6 +98,58 @@ const ARScene = () => {
     }
   }
 
+  const capturePhoto = async () => {
+    try {
+      if (!sceneRef.current) return
+
+      const canvas = sceneRef.current.querySelector('canvas')
+      if (!canvas) {
+        console.error('No se encontró el canvas de WebGL dentro de sceneRef')
+        return
+      }
+
+      // Método 4: Usar la API de Screen Capture (requiere permisos)
+      if ('getDisplayMedia' in navigator.mediaDevices) {
+        try {
+          console.log('Intentando captura de pantalla...')
+          const stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { mediaSource: 'screen' },
+          })
+
+          const video = document.createElement('video')
+          video.srcObject = stream
+          video.play()
+
+          video.addEventListener('loadedmetadata', () => {
+            const canvas = document.createElement('canvas')
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(video, 0, 0)
+
+            const dataURL = canvas.toDataURL('image/png')
+            const link = document.createElement('a')
+            link.download = `ar-capture-${Date.now()}.png`
+            link.href = dataURL
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
+            // Detener el stream
+            stream.getTracks().forEach((track) => track.stop())
+            console.log('Captura de pantalla exitosa')
+          })
+        } catch (screenError) {
+          console.error('Captura de pantalla falló:', screenError)
+        }
+      }
+    } catch (err) {
+      console.error('Error general al capturar imagen:', err)
+      alert('Error al capturar la imagen. Verifica la consola para más detalles.')
+    }
+  }
+
   if (error) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -119,31 +166,25 @@ const ARScene = () => {
 
   return (
     <div
-      className="fixed inset-0 bg-black overflow-hidden"
-      style={{
-        width: '100vw',
-        height: '100vh',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 1000,
-      }}
+      className="fixed inset-0 bg-black overflow-hidden ar-scene-capture-target"
+      style={{ width: '100vw', height: '100vh', position: 'fixed', top: 0, left: 0, zIndex: 1000 }}
     >
-      {/* Contenedor del canvas AR con aspect ratio preservado */}
       <div
         ref={sceneRef}
         className="absolute inset-0"
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'center',
-        }}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
       />
 
       {loading && <LoadingScreen modelType={modelType} />}
 
-      {/* Botón de volver optimizado para mobile */}
+      {!loading && (
+        <div className="absolute bottom-4 right-4 z-50 pointer-events-auto">
+          <button onClick={capturePhoto} className="px-4 py-2 bg-yellow-500 text-black rounded-lg shadow-lg hover:bg-yellow-600 transition">
+            📸 Capturar Foto
+          </button>
+        </div>
+      )}
+
       <div className="absolute top-4 left-4 z-50 pointer-events-none">
         <button
           onClick={handleBackToHome}
@@ -153,17 +194,15 @@ const ARScene = () => {
         </button>
       </div>
 
-      {/* Controles de modo AR */}
       {!loading && (
         <div className="absolute bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none">
           <button
             onClick={toggleStaticMode}
-            disabled={!isTargetFound && !isStaticMode}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 backdrop-blur-sm pointer-events-auto shadow-lg border border-white border-opacity-20 ${
               isStaticMode
                 ? 'bg-green-600 bg-opacity-80 text-white hover:bg-green-700'
                 : 'bg-blue-600 bg-opacity-80 text-white hover:bg-blue-700'
-            } ${!isTargetFound && !isStaticMode ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            }`}
           >
             {isStaticMode ? '📍 Modo Fijo' : '🎯 Modo Tracking'}
           </button>
@@ -179,7 +218,6 @@ const ARScene = () => {
         </div>
       )}
 
-      {/* Indicador de estado */}
       {!loading && (
         <div className="absolute top-4 right-4 z-50 pointer-events-none">
           <div
@@ -191,8 +229,6 @@ const ARScene = () => {
           </div>
         </div>
       )}
-
-      {/* Overlay para debugging (opcional - quitar en producción) */}
 
       <div className="absolute bottom-4 right-4 z-50 bg-black bg-opacity-70 text-white p-2 rounded text-xs">
         {dimensions.width}x{dimensions.height}

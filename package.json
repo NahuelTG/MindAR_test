@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
+    "@zumer/snapdom": "^1.9.3",
     "aframe": "^1.7.1",
     "mind-ar": "^1.2.5",
     "react": "^19.0.0",
