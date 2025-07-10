@@ -41,6 +41,11 @@ export class ARManager {
         }
       }
 
+      // Configurar el renderer con las dimensiones correctas
+      this.setupRenderer()
+
+      // Configurar la cámara
+      await this.setupCamera()
       // Crear modelo
       this.model = await ModelFactory.createModel(modelType)
 
@@ -63,8 +68,8 @@ export class ARManager {
       lightingManager.setupLights()
 
       // Configurar anchor
-      this.anchor = this.mindarInstance.addAnchor(0)
-      this.anchor.group.add(this.model.object)
+      const anchor = this.mindarInstance.addAnchor(0)
+      anchor.group.add(this.model.object)
       this.model.object.visible = false
 
       // Crear grupo para el modo estático
@@ -72,7 +77,7 @@ export class ARManager {
       this.scene.add(this.staticGroup)
 
       // Configurar eventos
-      this.setupAnchorEvents(this.anchor)
+      this.setupAnchorEvents(anchor)
 
       // Iniciar MindAR
       await this.mindarInstance.start()
@@ -202,6 +207,72 @@ export class ARManager {
     console.log('Posición del objeto reseteada')
   }
 
+  setupRenderer() {
+    if (this.renderer) {
+      this.renderer.dispose()
+    }
+
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+    })
+
+    // Configurar el tamaño del renderer
+    this.renderer.setSize(this.currentDimensions.width, this.currentDimensions.height)
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
+    // Configurar el canvas para que ocupe todo el contenedor
+    this.renderer.domElement.style.width = '100%'
+    this.renderer.domElement.style.height = '100%'
+    this.renderer.domElement.style.objectFit = 'cover'
+    this.renderer.domElement.style.objectPosition = 'center'
+
+    this.container.appendChild(this.renderer.domElement)
+  }
+
+  async setupCamera() {
+    try {
+      // Configurar constraints de video para mejor calidad
+      const constraints = {
+        video: {
+          facingMode: 'environment', // Cámara trasera
+          width: { ideal: this.currentDimensions.width },
+          height: { ideal: this.currentDimensions.height },
+          aspectRatio: { ideal: this.currentDimensions.width / this.currentDimensions.height },
+        },
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+
+      // Crear elemento de video
+      this.videoElement = document.createElement('video')
+      this.videoElement.srcObject = stream
+      this.videoElement.autoplay = true
+      this.videoElement.playsInline = true
+      this.videoElement.muted = true
+
+      // Configurar el video para que se ajuste correctamente
+      this.videoElement.style.width = '100%'
+      this.videoElement.style.height = '100%'
+      this.videoElement.style.objectFit = 'cover'
+      this.videoElement.style.objectPosition = 'center'
+
+      // Añadir el video al contenedor (detrás del canvas)
+      this.container.style.position = 'relative'
+      this.container.insertBefore(this.videoElement, this.container.firstChild)
+
+      return new Promise((resolve) => {
+        this.videoElement.onloadedmetadata = () => {
+          this.videoElement.play()
+          resolve()
+        }
+      })
+    } catch (error) {
+      console.error('Error accediendo a la cámara:', error)
+      throw error
+    }
+  }
+
   // Nuevo método para manejar el redimensionamiento
   handleResize(width, height) {
     // Actualizar dimensiones
@@ -218,13 +289,37 @@ export class ARManager {
       this.camera.aspect = width / height
       this.camera.updateProjectionMatrix()
     }
+
+    // Actualizar el video element
+    if (this.videoElement) {
+      // Reconfigurar constraints si es necesario
+      this.updateVideoConstraints()
+    }
+  }
+
+  updateVideoConstraints() {
+    if (this.videoElement && this.videoElement.srcObject) {
+      const stream = this.videoElement.srcObject
+      const videoTrack = stream.getVideoTracks()[0]
+
+      if (videoTrack) {
+        const constraints = {
+          width: { ideal: this.currentDimensions.width },
+          height: { ideal: this.currentDimensions.height },
+          aspectRatio: { ideal: this.currentDimensions.width / this.currentDimensions.height },
+        }
+
+        videoTrack.applyConstraints(constraints).catch((error) => {
+          console.warn('No se pudieron aplicar las nuevas constraints:', error)
+        })
+      }
+    }
   }
 
   setupRenderLoop() {
     this.renderer.setAnimationLoop(() => {
       const delta = this.clock.getDelta()
 
-      // Actualizar el modelo si está visible
       if (this.model.object.visible) {
         this.model.update?.(delta)
       }
