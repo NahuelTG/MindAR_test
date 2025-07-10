@@ -8,7 +8,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Selector />} />
-        <Route path="/Bee" element={<ARScene />} />
+        <Route path="/ar/:modelType" element={<ARScene />} />
       </Routes>
     </Router>
   )
