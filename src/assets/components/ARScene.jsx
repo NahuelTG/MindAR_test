@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { ARManager } from '../ar/ARManager'
 import { modelConfigs } from '../ar/models/modelConfigs'
-import { snapdom } from '@zumer/snapdom'
+//import { snapdom } from '@zumer/snapdom'
 import LoadingScreen from './LoadingScreen'
 import ARControlsInfo from './ARControlsInfo'
 
@@ -178,7 +178,7 @@ const ARScene = () => {
       {loading && <LoadingScreen modelType={modelType} />}
 
       {!loading && (
-        <div className="absolute bottom-4 right-4 z-50 pointer-events-auto">
+        <div className="absolute top-4 right-44 z-50 pointer-events-auto">
           <button onClick={capturePhoto} className="px-4 py-2 bg-yellow-500 text-black rounded-lg shadow-lg hover:bg-yellow-600 transition">
             📸 Capturar Foto
           </button>
@@ -195,7 +195,7 @@ const ARScene = () => {
       </div>
 
       {!loading && (
-        <div className="absolute bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none">
+        <div className="absolute top-4 left-44 z-50 flex flex-col gap-2 pointer-events-none">
           <button
             onClick={toggleStaticMode}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 backdrop-blur-sm pointer-events-auto shadow-lg border border-white border-opacity-20 ${
