@@ -1,4 +1,4 @@
-// 6. src/services/PhotoPreviewService.js
+//src/services/PhotoPreviewService.js
 import { PhotoPreviewUI } from '@/components/PhotoPreviewUI'
 
 export class PhotoPreviewService {

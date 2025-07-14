@@ -35,20 +35,31 @@ export class PhotoPreviewUI {
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(5px);
+      padding: 10px;
+      box-sizing: border-box;
     `
     return overlay
   }
 
   createPreviewContainer() {
     const container = document.createElement('div')
+    const isMobile = window.innerWidth <= 768
+
     container.style.cssText = `
+      display: flex;
+      flex-direction: column;
       background: white;
-      padding: 20px;
+      padding: ${isMobile ? '15px' : '20px'};
       border-radius: 15px;
       text-align: center;
-      max-width: 90%;
+      width: ${isMobile ? '95%' : '90%'};
+      max-width: ${isMobile ? '100%' : '600px'};
       max-height: 90%;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-sizing: border-box;
+      overflow: hidden;
+      align-items: center;
+      justify-content: center;
     `
     return container
   }
@@ -56,10 +67,12 @@ export class PhotoPreviewUI {
   createTitle() {
     const title = document.createElement('h3')
     title.innerHTML = this.capturedData.cameraOnly ? '📷 Foto capturada (solo cámara)' : '📸 Foto AR capturada'
+    const isMobile = window.innerWidth <= 768
+
     title.style.cssText = `
       margin: 0 0 15px 0;
       color: ${this.capturedData.cameraOnly ? '#ff9800' : '#4CAF50'};
-      font-size: 18px;
+      font-size: ${isMobile ? '16px' : '18px'};
       font-weight: bold;
     `
     return title
@@ -68,23 +81,52 @@ export class PhotoPreviewUI {
   createImage() {
     const img = document.createElement('img')
     img.src = this.capturedData.dataURL
+
+    const isMobile = window.innerWidth <= 768
+
     img.style.cssText = `
-      max-width: 100%;
-      max-height: 400px;
+      width: 100%;
+      height: auto;
+      max-height: ${isMobile ? '60vh' : '400px'};
       border-radius: 10px;
       margin-bottom: 20px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      object-fit: contain;
+      display: block;
     `
+
+    // Asegurar que la imagen se cargue correctamente
+    img.onload = () => {
+      // Recalcular dimensiones después de cargar
+      const aspectRatio = img.naturalWidth / img.naturalHeight
+      const containerWidth = img.parentElement.clientWidth - 40 // padding
+      const maxHeight = isMobile ? window.innerHeight * 0.6 : 400
+
+      let newWidth = containerWidth
+      let newHeight = containerWidth / aspectRatio
+
+      if (newHeight > maxHeight) {
+        newHeight = maxHeight
+        newWidth = newHeight * aspectRatio
+      }
+
+      img.style.width = `${newWidth}px`
+      img.style.height = `${newHeight}px`
+    }
+
     return img
   }
 
   createButtonsContainer() {
     const container = document.createElement('div')
+    const isMobile = window.innerWidth <= 768
+
     container.style.cssText = `
       display: flex;
-      gap: 15px;
+      gap: ${isMobile ? '10px' : '15px'};
       justify-content: center;
       flex-wrap: wrap;
+      padding-top: 10px;
     `
 
     const downloadBtn = this.createButton('📥 Descargar', '#4CAF50', '#45a049', this.downloadPhoto.bind(this))
@@ -101,26 +143,34 @@ export class PhotoPreviewUI {
   createButton(text, bgColor, hoverColor, clickHandler) {
     const button = document.createElement('button')
     button.innerHTML = text
+    const isMobile = window.innerWidth <= 768
+
     button.style.cssText = `
-      padding: 12px 24px;
+      padding: ${isMobile ? '10px 16px' : '12px 24px'};
       background: ${bgColor};
       color: white;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: ${isMobile ? '14px' : '16px'};
       font-weight: bold;
       transition: all 0.3s ease;
+      min-width: ${isMobile ? '80px' : '100px'};
+      white-space: nowrap;
     `
 
     button.addEventListener('mouseenter', () => {
       button.style.background = hoverColor
-      button.style.transform = 'translateY(-2px)'
+      if (!isMobile) {
+        button.style.transform = 'translateY(-2px)'
+      }
     })
 
     button.addEventListener('mouseleave', () => {
       button.style.background = bgColor
-      button.style.transform = 'translateY(0)'
+      if (!isMobile) {
+        button.style.transform = 'translateY(0)'
+      }
     })
 
     button.onclick = clickHandler
