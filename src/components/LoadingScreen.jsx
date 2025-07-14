@@ -1,4 +1,4 @@
-import { modelConfigs } from '../ar/models/modelConfigs'
+import { modelConfigs } from '../assets/ar/models/modelConfigs'
 
 const LoadingScreen = ({ modelType }) => {
   const modelConfig = modelConfigs[modelType]

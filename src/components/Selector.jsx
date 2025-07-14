@@ -1,4 +1,4 @@
-// assets/components/Selector.jsx
+//src/components/Selector.jsx
 import { useNavigate } from 'react-router'
 
 export const Selector = () => {
