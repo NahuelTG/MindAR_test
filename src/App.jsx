@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router'
-import { Selector } from './assets/components/Selector.jsx'
-import ARScene from './assets/components/ARScene.jsx'
+import { Selector } from './components/Selector.jsx'
+import ARScene from './components/ARScene.jsx'
 import './App.css'
 
 export default function App() {

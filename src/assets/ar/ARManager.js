@@ -215,6 +215,7 @@ export class ARManager {
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
+      preserveDrawingBuffer: true,
     })
 
     // Configurar el tamaño del renderer
