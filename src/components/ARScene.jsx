@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router'
 
-import { useARScene } from '@/hooks/useARCapture'
+import { useARScene } from '@/hooks/useARScene'
 import { useARControls } from '@/hooks/useARControls'
 import { useARCapture } from '@/hooks/useARCapture'
 import { useWindowDimensions } from '@/hooks/useWindowDimensions'
