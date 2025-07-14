@@ -1,4 +1,4 @@
-// 7. src/utils/capture/CaptureStrategy.js
+//src/utils/capture/CaptureStrategy.js
 export class CaptureStrategy {
   constructor(context) {
     this.arManagerRef = context.arManagerRef

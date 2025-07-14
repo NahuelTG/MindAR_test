@@ -1,5 +1,4 @@
-// 13. src/components/ARControls.jsx
-import React from 'react'
+//src/components/ARControls.jsx
 
 const ARControls = ({ isStaticMode, toggleStaticMode, resetObjectPosition, isTargetFound, onBackToHome }) => {
   return (

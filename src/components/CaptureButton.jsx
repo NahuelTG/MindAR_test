@@ -1,6 +1,4 @@
-// 14. src/components/CaptureButton.jsx
-import React from 'react'
-
+//src/components/CaptureButton.jsx
 const CaptureButton = ({ onCapture, isCapturing }) => {
   return (
     <div className="absolute top-4 right-4 z-50 pointer-events-auto">

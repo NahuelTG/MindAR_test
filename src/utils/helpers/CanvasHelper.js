@@ -1,4 +1,4 @@
-// 19. src/utils/helpers/CanvasHelper.js
+//src/utils/helpers/CanvasHelper.js
 export class CanvasHelper {
   static createCanvas(width, height) {
     const canvas = document.createElement('canvas')

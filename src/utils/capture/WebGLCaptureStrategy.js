@@ -1,4 +1,4 @@
-// 9. src/utils/capture/WebGLCaptureStrategy.js
+//src/utils/capture/WebGLCaptureStrategy.js
 import { CaptureStrategy } from './CaptureStrategy'
 
 export class WebGLCaptureStrategy extends CaptureStrategy {

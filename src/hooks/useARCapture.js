@@ -1,7 +1,7 @@
 // 1. src/hooks/useARCapture.js
 import { useState } from 'react'
-import { PhotoCaptureService } from '../services/PhotoCaptureService'
-import { PhotoPreviewService } from '../services/PhotoPreviewService'
+import { PhotoCaptureService } from '@/services/PhotoCaptureService'
+import { PhotoPreviewService } from '@/services/PhotoPreviewService'
 
 export const useARCapture = (arManagerRef, sceneRef, dimensions) => {
   const [isCapturing, setIsCapturing] = useState(false)

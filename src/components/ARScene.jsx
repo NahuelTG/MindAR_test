@@ -1,10 +1,12 @@
-// 16. src/components/ARScene.jsx - Componente refactorizado
-import React, { useEffect } from 'react'
+//src/components/ARScene.jsx - Componente refactorizado
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { useARScene } from '../hooks/useARScene'
-import { useARControls } from '../hooks/useARControls'
-import { useARCapture } from '../hooks/useARCapture'
-import { useWindowDimensions } from '../hooks/useWindowDimensions'
+
+import { useARScene } from '@/hooks/useARCapture'
+import { useARControls } from '@/hooks/useARControls'
+import { useARCapture } from '@/hooks/useARCapture'
+import { useWindowDimensions } from '@/hooks/useWindowDimensions'
+
 import LoadingScreen from './LoadingScreen'
 import ARControls from './ARControls'
 import CaptureButton from './CaptureButton'
@@ -26,7 +28,7 @@ const ARScene = () => {
     if (arManagerRef.current) {
       arManagerRef.current.handleResize(dimensions.width, dimensions.height)
     }
-  }, [dimensions])
+  }, [dimensions, arManagerRef])
 
   // Manejar evento de retomar foto
   useEffect(() => {

@@ -1,4 +1,4 @@
-// 11. src/utils/capture/CameraOnlyCaptureStrategy.js
+//src/utils/capture/CameraOnlyCaptureStrategy.js
 import { CaptureStrategy } from './CaptureStrategy'
 
 export class CameraOnlyCaptureStrategy extends CaptureStrategy {

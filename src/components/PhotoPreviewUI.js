@@ -1,4 +1,4 @@
-// 12. src/components/PhotoPreviewUI.js
+//src/components/PhotoPreviewUI.js
 export class PhotoPreviewUI {
   constructor(capturedData) {
     this.capturedData = capturedData

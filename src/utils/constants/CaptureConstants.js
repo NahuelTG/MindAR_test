@@ -1,4 +1,4 @@
-// 17. src/utils/constants/CaptureConstants.js
+//src/utils/constants/CaptureConstants.js
 export const CAPTURE_CONSTANTS = {
   JPEG_QUALITY: 0.9,
   HIGH_RES_SCALE: 2,

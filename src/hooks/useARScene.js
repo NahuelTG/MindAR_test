@@ -1,7 +1,7 @@
 // 2. src/hooks/useARScene.js
 import { useEffect, useRef, useState } from 'react'
-import { ARManager } from '../assets/ar/ARManager'
-import { modelConfigs } from '../assets/ar/models/modelConfigs'
+import { ARManager } from '@/assets/ar/ARManager'
+import { modelConfigs } from '@/assets/ar/models/modelConfigs'
 
 export const useARScene = (modelType, dimensions) => {
   const sceneRef = useRef(null)

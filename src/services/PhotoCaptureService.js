@@ -1,9 +1,9 @@
-// 5. src/services/PhotoCaptureService.js
-import { CaptureStrategy } from '../utils/capture/CaptureStrategy'
-import { RendererCaptureStrategy } from '../utils/capture/RendererCaptureStrategy'
-import { WebGLCaptureStrategy } from '../utils/capture/WebGLCaptureStrategy'
-import { ComposedCaptureStrategy } from '../utils/capture/ComposedCaptureStrategy'
-import { CameraOnlyCaptureStrategy } from '../utils/capture/CameraOnlyCaptureStrategy'
+//src/services/PhotoCaptureService.js
+import { CaptureStrategy } from '@/utils/capture/CaptureStrategy'
+import { RendererCaptureStrategy } from '@/utils/capture/RendererCaptureStrategy'
+import { WebGLCaptureStrategy } from '@/utils/capture/WebGLCaptureStrategy'
+import { ComposedCaptureStrategy } from '@/utils/capture/ComposedCaptureStrategy'
+import { CameraOnlyCaptureStrategy } from '@/utils/capture/CameraOnlyCaptureStrategy'
 
 export class PhotoCaptureService {
   constructor(arManagerRef, sceneRef, dimensions) {

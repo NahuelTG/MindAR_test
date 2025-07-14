@@ -1,4 +1,4 @@
-// 18. src/utils/validators/CaptureValidator.js
+//src/utils/validators/CaptureValidator.js
 export class CaptureValidator {
   static validateARManager(arManagerRef) {
     return arManagerRef?.current && arManagerRef.current.renderer

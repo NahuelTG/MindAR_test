@@ -1,4 +1,4 @@
-// 15. src/components/DimensionsIndicator.jsx
+//src/components/DimensionsIndicator.jsx
 import React from 'react'
 
 const DimensionsIndicator = ({ dimensions }) => {

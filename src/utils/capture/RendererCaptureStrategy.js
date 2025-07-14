@@ -1,4 +1,4 @@
-// 8. src/utils/capture/RendererCaptureStrategy.js
+//src/utils/capture/RendererCaptureStrategy.js
 import { CaptureStrategy } from './CaptureStrategy'
 
 export class RendererCaptureStrategy extends CaptureStrategy {
