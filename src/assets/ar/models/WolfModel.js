@@ -8,7 +8,7 @@ export class WolfModel extends BaseModel {
     this.targetSrc = '/wolf.mind'
     this.config = {
       modelPath: '/wolf.glb',
-      scale: { x: 1, y: 1, z: 1 },
+      scale: { x: 0.15, y: 0.15, z: 0.15 },
       position: { x: 0, y: -0.1, z: 0 },
       rotation: { speed: Math.PI / 6 },
       animationTimeScale: 0.8,
@@ -23,6 +23,9 @@ export class WolfModel extends BaseModel {
 
     // Callbacks para el control de animaciones
     this.onAnimationChanged = null
+
+    // Nombres temáticos para las animaciones
+    this.thematicNames = ['Explorador del Bosque', 'Cazador Sigiloso', 'Líder de la Manada', 'Guardián Nocturno', 'Espíritu Salvaje']
   }
 
   static async create() {
@@ -46,9 +49,9 @@ export class WolfModel extends BaseModel {
             this.mixer = new THREE.AnimationMixer(this.object)
             this.animations = gltf.animations
 
-            // Obtener nombres de las animaciones
+            // Usar nombres temáticos o nombres originales como fallback
             this.animationNames = this.animations.map((clip, index) => {
-              return clip.name || `Animación ${index + 1}`
+              return this.thematicNames[index] || clip.name || `Animación ${index + 1}`
             })
 
             console.log('Animaciones disponibles:', this.animationNames)
@@ -93,6 +96,21 @@ export class WolfModel extends BaseModel {
     }
 
     console.log(`Reproduciendo animación: ${this.animationNames[index]}`)
+
+    // Disparar evento personalizado para el juego interactivo
+    this.triggerAnimationEvent(index)
+  }
+
+  triggerAnimationEvent(animationIndex) {
+    // Dispatch custom event that the game component can listen to
+    const event = new CustomEvent('wolfAnimationChanged', {
+      detail: {
+        animationIndex,
+        animationName: this.animationNames[animationIndex],
+        timestamp: Date.now(),
+      },
+    })
+    window.dispatchEvent(event)
   }
 
   nextAnimation() {
@@ -142,10 +160,23 @@ export class WolfModel extends BaseModel {
   onTargetFound() {
     console.log('¡Lobo detectado!')
     console.log(`Animación actual: ${this.getCurrentAnimationName()}`)
+
+    // Disparar evento cuando se encuentra el target
+    window.dispatchEvent(
+      new CustomEvent('wolfTargetFound', {
+        detail: {
+          currentAnimation: this.currentAnimationIndex,
+          animationName: this.getCurrentAnimationName(),
+        },
+      })
+    )
   }
 
   onTargetLost() {
     console.log('Lobo perdido')
+
+    // Disparar evento cuando se pierde el target
+    window.dispatchEvent(new CustomEvent('wolfTargetLost'))
   }
 
   cleanup() {

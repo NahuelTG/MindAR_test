@@ -1,5 +1,4 @@
-//src/components/ARScene.jsx - Componente refactorizado con controles de animación
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 
 import { useARScene } from '@/hooks/useARScene'
@@ -10,6 +9,8 @@ import { useWindowDimensions } from '@/hooks/useWindowDimensions'
 import LoadingScreen from './LoadingScreen'
 import ARControls from './ARControls'
 import AnimationControls from './AnimationControls'
+import InteractiveGame from './InteractiveGame'
+import GameNotifications from './GameNotifications'
 import CaptureButton from './CaptureButton'
 import DimensionsIndicator from './DimensionsIndicator'
 
@@ -23,6 +24,9 @@ const ARScene = () => {
   const { isStaticMode, toggleStaticMode, resetObjectPosition } = useARControls(arManagerRef)
 
   const { capturePhoto, isCapturing } = useARCapture(arManagerRef, sceneRef, dimensions)
+
+  // Estado para el juego interactivo
+  const [currentGameAnimation, setCurrentGameAnimation] = useState(null)
 
   // Configurar viewport para móviles
   useEffect(() => {
@@ -59,6 +63,33 @@ const ARScene = () => {
       }
     }
   }, [])
+
+  // Escuchar eventos del modelo Wolf para juegos interactivos
+  useEffect(() => {
+    if (modelType !== 'wolf') return
+
+    const handleAnimationChange = (event) => {
+      setCurrentGameAnimation(event.detail.animationIndex)
+    }
+
+    const handleTargetFound = (event) => {
+      setCurrentGameAnimation(event.detail.currentAnimation)
+    }
+
+    const handleTargetLost = () => {
+      // Opcional: mantener el juego activo o pausarlo
+    }
+
+    window.addEventListener('wolfAnimationChanged', handleAnimationChange)
+    window.addEventListener('wolfTargetFound', handleTargetFound)
+    window.addEventListener('wolfTargetLost', handleTargetLost)
+
+    return () => {
+      window.removeEventListener('wolfAnimationChanged', handleAnimationChange)
+      window.removeEventListener('wolfTargetFound', handleTargetFound)
+      window.removeEventListener('wolfTargetLost', handleTargetLost)
+    }
+  }, [modelType])
 
   // Manejar resize del AR Manager
   useEffect(() => {
@@ -201,18 +232,38 @@ const ARScene = () => {
           {/* Controles de animación solo para el modelo wolf */}
           <AnimationControls arManagerRef={arManagerRef} modelType={modelType} isVisible={!loading && isTargetFound} />
 
+          {/* Juego interactivo solo para el modelo wolf */}
+          {modelType === 'wolf' && (
+            <InteractiveGame currentAnimation={currentGameAnimation} isVisible={!loading} isTargetFound={isTargetFound} />
+          )}
+
+          {/* Sistema de notificaciones */}
+          <GameNotifications />
+
           {!isMobile && <DimensionsIndicator dimensions={dimensions} />}
 
-          {/* Instrucciones de teclado para wolf (solo desktop) */}
+          {/* Instrucciones mejoradas para wolf (solo desktop) */}
           {modelType === 'wolf' && !isMobile && (
             <div className="absolute bottom-4 left-4 z-40 pointer-events-none">
-              <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-3 text-white text-xs">
-                <p className="mb-1">
-                  🎮 <strong>Atajos de teclado:</strong>
+              <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-3 text-white text-xs max-w-xs">
+                <p className="mb-2">
+                  🎮 <strong>Controles:</strong>
                 </p>
-                <p>← → Cambiar animación</p>
-                <p>Espacio: Pausar/Reproducir</p>
-                <p>1-5: Seleccionar animación</p>
+                <p className="mb-1">← → Cambiar animación</p>
+                <p className="mb-1">Espacio: Pausar/Reproducir</p>
+                <p className="mb-1">1-5: Seleccionar animación</p>
+                <p className="mt-2 text-purple-300">
+                  🎯 <strong>Cada animación tiene su propio juego!</strong>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Indicador de juego activo */}
+          {modelType === 'wolf' && isTargetFound && currentGameAnimation !== null && (
+            <div className="absolute top-4 right-4 z-40 pointer-events-none">
+              <div className="bg-purple-600 bg-opacity-80 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-sm shadow-lg border border-purple-400 border-opacity-50">
+                <span className="font-medium">🎮 Juego Activo</span>
               </div>
             </div>
           )}
