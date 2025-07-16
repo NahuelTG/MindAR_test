@@ -1,4 +1,4 @@
-//src/components/ARScene.jsx - Componente refactorizado y corregido para móviles
+//src/components/ARScene.jsx - Componente refactorizado con controles de animación
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router'
 
@@ -9,6 +9,7 @@ import { useWindowDimensions } from '@/hooks/useWindowDimensions'
 
 import LoadingScreen from './LoadingScreen'
 import ARControls from './ARControls'
+import AnimationControls from './AnimationControls'
 import CaptureButton from './CaptureButton'
 import DimensionsIndicator from './DimensionsIndicator'
 
@@ -79,6 +80,43 @@ const ARScene = () => {
     return () => window.removeEventListener('retakePhoto', handleRetakePhoto)
   }, [capturePhoto])
 
+  // Manejar controles de teclado para animaciones (solo para wolf)
+  useEffect(() => {
+    if (modelType !== 'wolf') return
+
+    const handleKeyPress = (event) => {
+      if (!arManagerRef.current?.model) return
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault()
+          arManagerRef.current.model.previousAnimation?.()
+          break
+        case 'ArrowRight':
+          event.preventDefault()
+          arManagerRef.current.model.nextAnimation?.()
+          break
+        case ' ':
+          event.preventDefault()
+          arManagerRef.current.model.togglePause?.()
+          break
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5': {
+          event.preventDefault()
+          const index = parseInt(event.key) - 1
+          arManagerRef.current.model.playAnimation?.(index)
+          break
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [modelType, arManagerRef])
+
   const handleBackToHome = () => {
     if (arManagerRef.current) {
       arManagerRef.current.cleanup()
@@ -145,8 +183,8 @@ const ARScene = () => {
             onCapture={capturePhoto}
             isCapturing={isCapturing}
             style={{
-              // Ajustar posición en móviles
-              bottom: isMobile ? '80px' : '30px',
+              // Ajustar posición en móviles considerando los controles de animación
+              bottom: isMobile ? (modelType === 'wolf' ? '200px' : '80px') : '30px',
               right: isMobile ? '20px' : '30px',
             }}
           />
@@ -160,7 +198,24 @@ const ARScene = () => {
             isMobile={isMobile}
           />
 
+          {/* Controles de animación solo para el modelo wolf */}
+          <AnimationControls arManagerRef={arManagerRef} modelType={modelType} isVisible={!loading && isTargetFound} />
+
           {!isMobile && <DimensionsIndicator dimensions={dimensions} />}
+
+          {/* Instrucciones de teclado para wolf (solo desktop) */}
+          {modelType === 'wolf' && !isMobile && (
+            <div className="absolute bottom-4 left-4 z-40 pointer-events-none">
+              <div className="bg-black bg-opacity-60 backdrop-blur-sm rounded-lg p-3 text-white text-xs">
+                <p className="mb-1">
+                  🎮 <strong>Atajos de teclado:</strong>
+                </p>
+                <p>← → Cambiar animación</p>
+                <p>Espacio: Pausar/Reproducir</p>
+                <p>1-5: Seleccionar animación</p>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

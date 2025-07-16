@@ -46,6 +46,7 @@ export class ARManager {
 
       // Configurar la cámara
       await this.setupCamera()
+
       // Crear modelo
       this.model = await ModelFactory.createModel(modelType)
 
@@ -67,9 +68,9 @@ export class ARManager {
       const lightingManager = new LightingManager(scene)
       lightingManager.setupLights()
 
-      // Configurar anchor
-      const anchor = this.mindarInstance.addAnchor(0)
-      anchor.group.add(this.model.object)
+      // Configurar anchor y guardarlo en la instancia
+      this.anchor = this.mindarInstance.addAnchor(0)
+      this.anchor.group.add(this.model.object)
       this.model.object.visible = false
 
       // Crear grupo para el modo estático
@@ -77,7 +78,7 @@ export class ARManager {
       this.scene.add(this.staticGroup)
 
       // Configurar eventos
-      this.setupAnchorEvents(anchor)
+      this.setupAnchorEvents(this.anchor)
 
       // Iniciar MindAR
       await this.mindarInstance.start()
@@ -87,6 +88,11 @@ export class ARManager {
 
       // Configurar redimensionamiento
       this.setupResize()
+
+      // Log de información del modelo para debug
+      if (modelType === 'wolf' && this.model.getAnimationInfo) {
+        console.log('Información del modelo Wolf:', this.model.getAnimationInfo())
+      }
     } catch (error) {
       console.error('Error initializing AR:', error)
       throw error
@@ -156,7 +162,9 @@ export class ARManager {
     this.savedScale = worldScale.clone()
 
     // Remover el objeto del anchor
-    this.anchor.group.remove(this.model.object)
+    if (this.anchor) {
+      this.anchor.group.remove(this.model.object)
+    }
 
     // Aplicar las transformaciones guardadas al objeto
     this.model.object.position.copy(this.savedPosition)
@@ -183,7 +191,9 @@ export class ARManager {
       this.model.object.scale.set(1, 1, 1)
 
       // Volver a añadir al anchor
-      this.anchor.group.add(this.model.object)
+      if (this.anchor) {
+        this.anchor.group.add(this.model.object)
+      }
 
       // El objeto será visible solo cuando se detecte el target
       this.model.object.visible = false
@@ -347,6 +357,31 @@ export class ARManager {
     })
   }
 
+  // Métodos de conveniencia para acceder a las funciones del modelo
+  getModelAnimationInfo() {
+    return this.model?.getAnimationInfo?.() || null
+  }
+
+  playModelAnimation(index) {
+    this.model?.playAnimation?.(index)
+  }
+
+  nextModelAnimation() {
+    this.model?.nextAnimation?.()
+  }
+
+  previousModelAnimation() {
+    this.model?.previousAnimation?.()
+  }
+
+  toggleModelAnimation() {
+    return this.model?.togglePause?.() || false
+  }
+
+  setModelAnimationSpeed(speed) {
+    this.model?.setAnimationSpeed?.(speed)
+  }
+
   cleanup() {
     console.log('Limpiando ARManager')
 
@@ -376,5 +411,6 @@ export class ARManager {
     this.savedRotation = null
     this.savedScale = null
     this.anchor = null
+    this.model = null
   }
 }
