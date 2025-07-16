@@ -18,7 +18,8 @@ export const Selector = () => {
       id: 'wolf',
       name: 'Lobo',
       emoji: '🐺',
-      targetImageUrl: 'https://example.com/wolf-target.jpg',
+      targetImageUrl:
+        'https://media.istockphoto.com/id/1125969216/vector/wolf-howling-silhouette.jpg?s=612x612&w=0&k=20&c=ohp-CLlOER46IZ6xF_YfaT4dnMnJs0P6ENSp7nst-NM=',
       gradient: 'from-slate-600 to-gray-700',
       hoverGradient: 'hover:from-slate-700 hover:to-gray-800',
       focusRing: 'focus:ring-slate-500',
