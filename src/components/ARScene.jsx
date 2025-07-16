@@ -9,7 +9,7 @@ import { useWindowDimensions } from '@/hooks/useWindowDimensions'
 import LoadingScreen from './LoadingScreen'
 import ARControls from './ARControls'
 import AnimationControls from './AnimationControls'
-import InteractiveGame from './InteractiveGame'
+import FloatingGamePopup from './FloatingGamePopup'
 import GameNotifications from './GameNotifications'
 import CaptureButton from './CaptureButton'
 import DimensionsIndicator from './DimensionsIndicator'
@@ -214,8 +214,8 @@ const ARScene = () => {
             onCapture={capturePhoto}
             isCapturing={isCapturing}
             style={{
-              // Ajustar posición en móviles considerando los controles de animación
-              bottom: isMobile ? (modelType === 'wolf' ? '200px' : '80px') : '30px',
+              // Ajustar posición en móviles
+              bottom: isMobile ? '120px' : '30px',
               right: isMobile ? '20px' : '30px',
             }}
           />
@@ -232,9 +232,14 @@ const ARScene = () => {
           {/* Controles de animación solo para el modelo wolf */}
           <AnimationControls arManagerRef={arManagerRef} modelType={modelType} isVisible={!loading && isTargetFound} />
 
-          {/* Juego interactivo solo para el modelo wolf */}
+          {/* Pop-up flotante de juego desde el lobo */}
           {modelType === 'wolf' && (
-            <InteractiveGame currentAnimation={currentGameAnimation} isVisible={!loading} isTargetFound={isTargetFound} />
+            <FloatingGamePopup
+              currentAnimation={currentGameAnimation}
+              isVisible={!loading}
+              isTargetFound={isTargetFound}
+              arManagerRef={arManagerRef}
+            />
           )}
 
           {/* Sistema de notificaciones */}
@@ -253,11 +258,32 @@ const ARScene = () => {
                 <p className="mb-1">Espacio: Pausar/Reproducir</p>
                 <p className="mb-1">1-5: Seleccionar animación</p>
                 <p className="mt-2 text-purple-300">
-                  🎯 <strong>Cada animación tiene su propio juego!</strong>
+                  🐺 <strong>¡El lobo te invitará a jugar!</strong>
                 </p>
               </div>
             </div>
           )}
+
+          {/* Indicador mejorado de juego activo */}
+          {modelType === 'wolf' && isTargetFound && currentGameAnimation !== null && (
+            <div className="absolute top-4 right-4 z-40 pointer-events-none">
+              <div className="bg-purple-600 bg-opacity-80 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-sm shadow-lg border border-purple-400 border-opacity-50 flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="font-medium">🎮 Lobo Interactivo</span>
+              </div>
+            </div>
+          )}
+          <div className="text-white text-xs max-w-xs">
+            <p className="mb-2">
+              🎮 <strong>Controles:</strong>
+            </p>
+            <p className="mb-1">← → Cambiar animación</p>
+            <p className="mb-1">Espacio: Pausar/Reproducir</p>
+            <p className="mb-1">1-5: Seleccionar animación</p>
+            <p className="mt-2 text-purple-300">
+              🎯 <strong>Cada animación tiene su propio juego!</strong>
+            </p>
+          </div>
 
           {/* Indicador de juego activo */}
           {modelType === 'wolf' && isTargetFound && currentGameAnimation !== null && (

@@ -1,4 +1,4 @@
-// 3. src/hooks/useARControls.js
+//src/hooks/useARControls.js
 import { useState } from 'react'
 
 export const useARControls = (arManagerRef) => {

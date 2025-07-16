@@ -8,7 +8,7 @@ export class WolfModel extends BaseModel {
     this.targetSrc = '/wolf.mind'
     this.config = {
       modelPath: '/wolf.glb',
-      scale: { x: 0.15, y: 0.15, z: 0.15 },
+      scale: { x: 1, y: 1, z: 1 },
       position: { x: 0, y: -0.1, z: 0 },
       rotation: { speed: Math.PI / 6 },
       animationTimeScale: 0.8,
