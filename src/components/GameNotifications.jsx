@@ -93,22 +93,24 @@ const GameNotifications = () => {
 
   return (
     <>
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(100%);
+      <style>
+        {`
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateX(100%);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
           }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
 
-        .animate-slideIn {
-          animation: slideIn 0.3s ease-out;
-        }
-      `}</style>
+          .animate-slideIn {
+            animation: slideIn 0.3s ease-out;
+          }
+        `}
+      </style>
 
       <div className="fixed top-20 right-4 z-50 max-w-sm pointer-events-none">
         {notifications.map((notification) => (

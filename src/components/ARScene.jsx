@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
 
 import { useARScene } from '@/hooks/useARScene'
 import { useARControls } from '@/hooks/useARControls'
 import { useARCapture } from '@/hooks/useARCapture'
 import { useWindowDimensions } from '@/hooks/useWindowDimensions'
+import { useMobileOrientation } from '@/hooks/useMobileOrientation'
 
 import LoadingScreen from './LoadingScreen'
 import ARControls from './ARControls'
@@ -13,11 +14,13 @@ import FloatingGamePopup from './FloatingGamePopup'
 import GameNotifications from './GameNotifications'
 import CaptureButton from './CaptureButton'
 import DimensionsIndicator from './DimensionsIndicator'
+import CameraDebugInfo from './CameraDebugInfo'
 
 const ARScene = () => {
   const { modelType } = useParams()
   const navigate = useNavigate()
   const dimensions = useWindowDimensions()
+  const { orientation } = useMobileOrientation()
 
   const { sceneRef, arManagerRef, loading, error, isTargetFound } = useARScene(modelType, dimensions)
 
@@ -27,6 +30,36 @@ const ARScene = () => {
 
   // Estado para el juego interactivo
   const [currentGameAnimation, setCurrentGameAnimation] = useState(null)
+  const [showCameraDebug, setShowCameraDebug] = useState(false)
+
+  // Función mejorada para volver al inicio
+  const handleBackToHome = useCallback(() => {
+    try {
+      // Limpiar el AR Manager de forma segura
+      if (arManagerRef.current) {
+        console.log('Limpiando AR Manager...')
+        arManagerRef.current.cleanup()
+        arManagerRef.current = null
+      }
+
+      // Limpiar eventos globales
+      window.removeEventListener('wolfAnimationChanged', () => {})
+      window.removeEventListener('wolfTargetFound', () => {})
+      window.removeEventListener('wolfTargetLost', () => {})
+
+      // Remover clase AR del body
+      document.body.classList.remove('ar-active')
+
+      // Pequeña pausa antes de navegar para asegurar limpieza
+      setTimeout(() => {
+        navigate('/', { replace: true })
+      }, 100)
+    } catch (error) {
+      console.error('Error al limpiar:', error)
+      // Navegar de todos modos
+      navigate('/', { replace: true })
+    }
+  }, [navigate, arManagerRef])
 
   // Configurar viewport para móviles
   useEffect(() => {
@@ -91,15 +124,27 @@ const ARScene = () => {
     }
   }, [modelType])
 
-  // Manejar resize del AR Manager
+  // Manejar resize del AR Manager con debounce y orientación
   useEffect(() => {
-    if (arManagerRef.current) {
-      // Agregar un pequeño delay para asegurar que las dimensiones estén correctas
-      setTimeout(() => {
-        arManagerRef.current.handleResize(dimensions.width, dimensions.height)
-      }, 100)
+    if (!arManagerRef.current) return
+
+    let timeoutId
+    const handleResize = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        if (arManagerRef.current) {
+          console.log(`Redimensionando por orientación: ${orientation.type}`)
+          arManagerRef.current.handleResize(dimensions.width, dimensions.height)
+        }
+      }, 200) // Aumentamos el delay para cambios de orientación
     }
-  }, [dimensions, arManagerRef])
+
+    handleResize()
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [dimensions, orientation, arManagerRef])
 
   // Manejar evento de retomar foto
   useEffect(() => {
@@ -131,6 +176,17 @@ const ARScene = () => {
           event.preventDefault()
           arManagerRef.current.model.togglePause?.()
           break
+        case 'Escape':
+          event.preventDefault()
+          handleBackToHome()
+          break
+        case 'd':
+        case 'D':
+          if (isMobile) {
+            event.preventDefault()
+            setShowCameraDebug(!showCameraDebug)
+          }
+          break
         case '1':
         case '2':
         case '3':
@@ -146,14 +202,17 @@ const ARScene = () => {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [modelType, arManagerRef])
+  }, [modelType, arManagerRef, handleBackToHome])
 
-  const handleBackToHome = () => {
-    if (arManagerRef.current) {
-      arManagerRef.current.cleanup()
+  // Cleanup al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (arManagerRef.current) {
+        arManagerRef.current.cleanup()
+      }
+      document.body.classList.remove('ar-active')
     }
-    navigate('/')
-  }
+  }, [arManagerRef])
 
   if (error) {
     return (
@@ -247,6 +306,20 @@ const ARScene = () => {
 
           {!isMobile && <DimensionsIndicator dimensions={dimensions} />}
 
+          {/* Debug info para la cámara */}
+          <CameraDebugInfo arManagerRef={arManagerRef} show={isMobile && showCameraDebug} />
+
+          {/* Botón de debug para móviles */}
+          {isMobile && (
+            <button
+              onClick={() => setShowCameraDebug(!showCameraDebug)}
+              className="fixed bottom-4 right-4 z-50 w-12 h-12 bg-red-500 bg-opacity-70 text-white rounded-full text-xs font-bold shadow-lg"
+              style={{ fontSize: '10px' }}
+            >
+              📹
+            </button>
+          )}
+
           {/* Instrucciones mejoradas para wolf (solo desktop) */}
           {modelType === 'wolf' && !isMobile && (
             <div className="absolute bottom-4 left-4 z-40 pointer-events-none">
@@ -257,6 +330,7 @@ const ARScene = () => {
                 <p className="mb-1">← → Cambiar animación</p>
                 <p className="mb-1">Espacio: Pausar/Reproducir</p>
                 <p className="mb-1">1-5: Seleccionar animación</p>
+                <p className="mb-1">Escape: Volver al inicio</p>
                 <p className="mt-2 text-purple-300">
                   🐺 <strong>¡El lobo te invitará a jugar!</strong>
                 </p>
@@ -270,26 +344,6 @@ const ARScene = () => {
               <div className="bg-purple-600 bg-opacity-80 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-sm shadow-lg border border-purple-400 border-opacity-50 flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 <span className="font-medium">🎮 Lobo Interactivo</span>
-              </div>
-            </div>
-          )}
-          <div className="text-white text-xs max-w-xs">
-            <p className="mb-2">
-              🎮 <strong>Controles:</strong>
-            </p>
-            <p className="mb-1">← → Cambiar animación</p>
-            <p className="mb-1">Espacio: Pausar/Reproducir</p>
-            <p className="mb-1">1-5: Seleccionar animación</p>
-            <p className="mt-2 text-purple-300">
-              🎯 <strong>Cada animación tiene su propio juego!</strong>
-            </p>
-          </div>
-
-          {/* Indicador de juego activo */}
-          {modelType === 'wolf' && isTargetFound && currentGameAnimation !== null && (
-            <div className="absolute top-4 right-4 z-40 pointer-events-none">
-              <div className="bg-purple-600 bg-opacity-80 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-sm shadow-lg border border-purple-400 border-opacity-50">
-                <span className="font-medium">🎮 Juego Activo</span>
               </div>
             </div>
           )}

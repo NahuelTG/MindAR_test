@@ -1,5 +1,5 @@
 // src/components/FloatingGamePopup.jsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getGameByAnimation } from '@/assets/ar/games/wolfGamesData'
 import { showGameNotification } from './GameNotifications'
 import { useWorldProjection } from '@/hooks/useWorldProjection'
@@ -17,35 +17,29 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
   const [currentSequenceIndex, setCurrentSequenceIndex] = useState(0)
   const [totalGamesPlayed, setTotalGamesPlayed] = useState(0)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0, isVisible: false })
 
-  // Usar el hook de proyección
+  // Memoizar la condición de visibilidad para evitar re-renders innecesarios
+  const shouldShowProjection = useMemo(() => {
+    return isVisible && isTargetFound
+  }, [isVisible, isTargetFound])
+
+  // Usar el hook de proyección con la condición memoizada
   const { screenPosition, getOptimalPopupPosition, getConnectionAngle, isProjectorReady } = useWorldProjection(
     arManagerRef,
     'wolf',
-    isVisible && isTargetFound
+    shouldShowProjection
   )
 
-  // Actualizar posición del popup
-  useEffect(() => {
+  // Memoizar la posición del popup para evitar recálculos constantes
+  const popupPosition = useMemo(() => {
     if (isProjectorReady && screenPosition.isVisible) {
-      const optimalPos = getOptimalPopupPosition()
-      setPopupPosition(optimalPos)
-    } else {
-      setPopupPosition({ x: 0, y: 0, isVisible: false })
+      return getOptimalPopupPosition()
     }
-  }, [screenPosition, isProjectorReady, getOptimalPopupPosition])
+    return { x: 0, y: 0, isVisible: false }
+  }, [isProjectorReady, screenPosition.isVisible, screenPosition.x, screenPosition.y, getOptimalPopupPosition])
 
-  // Resto de la lógica del juego (igual que antes)
-  useEffect(() => {
-    if (currentAnimation !== null) {
-      const game = getGameByAnimation(currentAnimation)
-      setGameData(game)
-      resetGame()
-    }
-  }, [currentAnimation])
-
-  const resetGame = () => {
+  // Usar useCallback para las funciones que no cambian frecuentemente
+  const resetGame = useCallback(() => {
     setGameState('waiting')
     setCurrentQuestion(0)
     setScore(0)
@@ -56,18 +50,11 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
     setShowSequence(false)
     setCurrentSequenceIndex(0)
     setIsMinimized(false)
-  }
+  }, [])
 
-  const startGame = () => {
-    if (gameData?.type === 'memory') {
-      startMemoryGame()
-    } else {
-      setGameState('playing')
-    }
-    showGameNotification('tip', `🎮 ¡${gameData.title} iniciado!`)
-  }
+  const startMemoryGame = useCallback(() => {
+    if (!gameData?.sequences) return
 
-  const startMemoryGame = () => {
     setGameState('playing')
     setShowSequence(true)
     setCurrentSequenceIndex(0)
@@ -87,34 +74,78 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
     }
 
     setTimeout(showNextItem, 500)
-  }
+  }, [gameData, currentQuestion])
 
-  const handleQuizAnswer = (answerIndex) => {
-    setSelectedAnswer(answerIndex)
-    const isCorrect = answerIndex === (gameData.questions?.[currentQuestion]?.correct ?? gameData.scenarios?.[currentQuestion]?.correct)
-
-    if (isCorrect) {
-      setScore(score + 1)
-      showGameNotification('success', '🎉 ¡Respuesta correcta!')
+  const startGame = useCallback(() => {
+    if (gameData?.type === 'memory') {
+      startMemoryGame()
     } else {
-      showGameNotification('error', '❌ Respuesta incorrecta, ¡sigue intentando!')
+      setGameState('playing')
+    }
+    showGameNotification('tip', `🎮 ¡${gameData.title} iniciado!`)
+  }, [gameData, startMemoryGame])
+
+  const completeGame = useCallback(() => {
+    setGameState('completed')
+    setTotalGamesPlayed((prev) => prev + 1)
+
+    const totalQuestions =
+      gameData.questions?.length || gameData.challenges?.length || gameData.sequences?.length || gameData.scenarios?.length
+    const percentage = Math.round((score / totalQuestions) * 100)
+
+    if (percentage === 100) {
+      showGameNotification('achievement', '🏆 ¡Puntuación perfecta! Eres un verdadero alfa', 5000)
+    } else if (percentage >= 80) {
+      showGameNotification('achievement', '🌟 ¡Excelente puntuación! El lobo está orgulloso', 4000)
+    } else if (percentage >= 60) {
+      showGameNotification('success', '👍 ¡Buen trabajo! Has demostrado tus instintos', 3000)
+    } else {
+      showGameNotification('tip', '💪 ¡Sigue practicando! Los lobos aprenden de cada experiencia', 3000)
     }
 
-    setShowResult(true)
+    if (totalGamesPlayed === 5) {
+      showGameNotification('achievement', '🎮 ¡Has completado todos los juegos! Eres el maestro del lobo', 6000)
+    }
+  }, [gameData, score, totalGamesPlayed])
 
-    setTimeout(() => {
-      const totalQuestions = gameData.questions?.length || gameData.scenarios?.length
-      if (currentQuestion < totalQuestions - 1) {
-        setCurrentQuestion(currentQuestion + 1)
-        setSelectedAnswer(null)
-        setShowResult(false)
+  // Efecto para cargar datos del juego - solo cuando cambia currentAnimation
+  useEffect(() => {
+    if (currentAnimation !== null) {
+      const game = getGameByAnimation(currentAnimation)
+      setGameData(game)
+      resetGame()
+    }
+  }, [currentAnimation, resetGame])
+
+  const handleQuizAnswer = useCallback(
+    (answerIndex) => {
+      setSelectedAnswer(answerIndex)
+      const isCorrect = answerIndex === (gameData.questions?.[currentQuestion]?.correct ?? gameData.scenarios?.[currentQuestion]?.correct)
+
+      if (isCorrect) {
+        setScore(score + 1)
+        showGameNotification('success', '🎉 ¡Respuesta correcta!')
       } else {
-        completeGame()
+        showGameNotification('error', '❌ Respuesta incorrecta, ¡sigue intentando!')
       }
-    }, 2500)
-  }
 
-  const handleWordGame = () => {
+      setShowResult(true)
+
+      setTimeout(() => {
+        const totalQuestions = gameData.questions?.length || gameData.scenarios?.length
+        if (currentQuestion < totalQuestions - 1) {
+          setCurrentQuestion(currentQuestion + 1)
+          setSelectedAnswer(null)
+          setShowResult(false)
+        } else {
+          completeGame()
+        }
+      }, 2500)
+    },
+    [gameData, currentQuestion, score, completeGame]
+  )
+
+  const handleWordGame = useCallback(() => {
     const challenge = gameData.challenges[currentQuestion]
     const isCorrect = userAnswer.toUpperCase() === challenge.answer.toUpperCase()
 
@@ -136,61 +167,41 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
         completeGame()
       }
     }, 2000)
-  }
+  }, [gameData, currentQuestion, userAnswer, score, completeGame])
 
-  const handleMemoryClick = (emoji) => {
-    const newSequence = [...playerSequence, emoji]
-    setPlayerSequence(newSequence)
+  const handleMemoryClick = useCallback(
+    (emoji) => {
+      const newSequence = [...playerSequence, emoji]
+      setPlayerSequence(newSequence)
 
-    const currentPattern = gameData.sequences[currentQuestion].pattern
-    const isCorrectSoFar = newSequence.every((item, index) => item === currentPattern[index])
+      const currentPattern = gameData.sequences[currentQuestion].pattern
+      const isCorrectSoFar = newSequence.every((item, index) => item === currentPattern[index])
 
-    if (!isCorrectSoFar) {
-      showGameNotification('error', '🧠 ¡Secuencia incorrecta! Inténtalo de nuevo')
-      setShowResult(true)
-      setTimeout(() => {
-        setPlayerSequence([])
-        setShowResult(false)
-      }, 2000)
-    } else if (newSequence.length === currentPattern.length) {
-      setScore(score + 1)
-      showGameNotification('success', '🎯 ¡Secuencia perfecta!')
-      setShowResult(true)
-      setTimeout(() => {
-        if (currentQuestion < gameData.sequences.length - 1) {
-          setCurrentQuestion(currentQuestion + 1)
+      if (!isCorrectSoFar) {
+        showGameNotification('error', '🧠 ¡Secuencia incorrecta! Inténtalo de nuevo')
+        setShowResult(true)
+        setTimeout(() => {
           setPlayerSequence([])
           setShowResult(false)
-          startMemoryGame()
-        } else {
-          completeGame()
-        }
-      }, 2000)
-    }
-  }
-
-  const completeGame = () => {
-    setGameState('completed')
-    setTotalGamesPlayed((prev) => prev + 1)
-
-    const totalQuestions =
-      gameData.questions?.length || gameData.challenges?.length || gameData.sequences?.length || gameData.scenarios?.length
-    const percentage = Math.round((score / totalQuestions) * 100)
-
-    if (percentage === 100) {
-      showGameNotification('achievement', '🏆 ¡Puntuación perfecta! Eres un verdadero alfa', 5000)
-    } else if (percentage >= 80) {
-      showGameNotification('achievement', '🌟 ¡Excelente puntuación! El lobo está orgulloso', 4000)
-    } else if (percentage >= 60) {
-      showGameNotification('success', '👍 ¡Buen trabajo! Has demostrado tus instintos', 3000)
-    } else {
-      showGameNotification('tip', '💪 ¡Sigue practicando! Los lobos aprenden de cada experiencia', 3000)
-    }
-
-    if (totalGamesPlayed === 5) {
-      showGameNotification('achievement', '🎮 ¡Has completado todos los juegos! Eres el maestro del lobo', 6000)
-    }
-  }
+        }, 2000)
+      } else if (newSequence.length === currentPattern.length) {
+        setScore(score + 1)
+        showGameNotification('success', '🎯 ¡Secuencia perfecta!')
+        setShowResult(true)
+        setTimeout(() => {
+          if (currentQuestion < gameData.sequences.length - 1) {
+            setCurrentQuestion(currentQuestion + 1)
+            setPlayerSequence([])
+            setShowResult(false)
+            startMemoryGame()
+          } else {
+            completeGame()
+          }
+        }, 2000)
+      }
+    },
+    [playerSequence, gameData, currentQuestion, score, startMemoryGame, completeGame]
+  )
 
   // Componentes de renderizado para cada tipo de juego
   const renderQuizGame = () => {
