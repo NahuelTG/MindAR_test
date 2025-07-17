@@ -428,7 +428,7 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
                 className="w-6 h-6 rounded bg-gray-700 hover:bg-red-600 text-white text-xs flex items-center justify-center transition-colors active:scale-95"
                 title="Cerrar juego"
               >
-                ✕
+                🔃
               </button>
             </div>
           </div>

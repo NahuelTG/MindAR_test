@@ -32,6 +32,9 @@ const ARScene = () => {
   const [currentGameAnimation, setCurrentGameAnimation] = useState(null)
   const [showCameraDebug, setShowCameraDebug] = useState(false)
 
+  // Vista de controles de animacion
+  const [showAnimationControls, setShowAnimationControls] = useState(false)
+
   // Función mejorada para volver al inicio
   const handleBackToHome = useCallback(() => {
     try {
@@ -269,15 +272,7 @@ const ARScene = () => {
 
       {!loading && (
         <>
-          <CaptureButton
-            onCapture={capturePhoto}
-            isCapturing={isCapturing}
-            style={{
-              // Ajustar posición en móviles
-              bottom: isMobile ? '120px' : '30px',
-              right: isMobile ? '20px' : '30px',
-            }}
-          />
+          <CaptureButton onCapture={capturePhoto} isCapturing={isCapturing} isMobile={isMobile} />
 
           <ARControls
             isStaticMode={isStaticMode}
@@ -289,7 +284,12 @@ const ARScene = () => {
           />
 
           {/* Controles de animación solo para el modelo wolf */}
-          <AnimationControls arManagerRef={arManagerRef} modelType={modelType} isVisible={!loading && isTargetFound} />
+          <AnimationControls
+            arManagerRef={arManagerRef}
+            modelType={modelType}
+            isVisible={!loading && isTargetFound}
+            onControlsToggle={setShowAnimationControls}
+          />
 
           {/* Pop-up flotante de juego desde el lobo */}
           {modelType === 'wolf' && (
@@ -298,6 +298,7 @@ const ARScene = () => {
               isVisible={!loading}
               isTargetFound={isTargetFound}
               arManagerRef={arManagerRef}
+              hideWhenControlsVisible={showAnimationControls}
             />
           )}
 

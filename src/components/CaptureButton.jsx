@@ -4,7 +4,7 @@ const CaptureButton = ({ onCapture, isCapturing, isMobile = false }) => {
     <div
       className={`absolute ${
         isMobile
-          ? 'top-4 right-4' // En móvil: esquina superior derecha
+          ? 'top-16 right-4' // En móvil: esquina superior derecha
           : 'top-4 right-4' // En desktop: esquina superior derecha también
       } z-50 pointer-events-auto`}
     >
