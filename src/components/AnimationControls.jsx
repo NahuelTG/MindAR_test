@@ -41,7 +41,7 @@ const AnimationControls = ({ arManagerRef, modelType, isVisible, isMobile = fals
     <div
       className={`absolute z-40 pointer-events-none ${
         isMobile
-          ? 'bottom-4 left-4 right-4' // En móvil: parte inferior completa
+          ? 'bottom-12 left-4 right-4' // En móvil: parte inferior completa
           : 'bottom-4 left-4 right-4' // En desktop: parte inferior completa
       }`}
     >
