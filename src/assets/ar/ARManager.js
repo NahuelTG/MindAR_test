@@ -30,6 +30,13 @@ export class ARManager {
     // Callbacks para el estado del target
     this.onTargetFound = null
     this.onTargetLost = null
+
+    // Propiedades para la configuración de cámara mejorada
+    this.cameraConfig = {
+      actualResolution: { width: 0, height: 0 },
+      aspectRatio: 1,
+      isMobile: window.innerWidth <= 768,
+    }
   }
 
   async initialize(modelType, dimensions = null) {
@@ -49,6 +56,8 @@ export class ARManager {
         }
       }
 
+      this.cameraConfig.isMobile = this.currentDimensions.width <= 768
+
       // Crear modelo
       this.model = await ModelFactory.createModel(modelType)
 
@@ -64,7 +73,7 @@ export class ARManager {
         filterBeta: 0.001,
         missTolerance: 0,
         warmupTolerance: 5,
-        // Configuración específica para móviles
+        // Configuración específica para móviles mejorada
         videoSettings: {
           facingMode: 'environment',
         },
@@ -79,7 +88,7 @@ export class ARManager {
       this.setupRenderer()
 
       // Configurar la cámara mejorada para móviles
-      await this.setupMobileCamera()
+      await this.setupImprovedMobileCamera()
 
       // Configurar iluminación
       const lightingManager = new LightingManager(scene)
@@ -119,41 +128,79 @@ export class ARManager {
     }
   }
 
-  async setupMobileCamera() {
+  async setupImprovedMobileCamera() {
     try {
-      // Detectar si es móvil
-      const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      const isMobile = this.cameraConfig.isMobile
 
-      // Configurar constraints optimizadas para móviles
-      const baseConstraints = {
+      // Obtener la resolución de la pantalla para calcular constraints óptimos
+      const screenWidth = this.currentDimensions.width
+      const screenHeight = this.currentDimensions.height
+      const screenAspectRatio = screenWidth / screenHeight
+
+      console.log(`Configurando cámara para: ${screenWidth}x${screenHeight} (${screenAspectRatio.toFixed(2)})`)
+
+      // Configurar constraints optimizadas según el dispositivo
+      let cameraConstraints = {
         video: {
           facingMode: 'environment',
-          width: { ideal: this.currentDimensions.width },
-          height: { ideal: this.currentDimensions.height },
+          width: { ideal: screenWidth },
+          height: { ideal: screenHeight },
+          aspectRatio: { ideal: screenAspectRatio },
         },
       }
 
       if (isMobile) {
-        // Configuración específica para móviles
-        baseConstraints.video = {
-          ...baseConstraints.video,
-          aspectRatio: { ideal: this.currentDimensions.width / this.currentDimensions.height },
-          // Resolutions comunes para móviles
-          width: {
-            min: 640,
-            ideal: Math.min(this.currentDimensions.width, 1920),
-            max: 1920,
-          },
-          height: {
-            min: 480,
-            ideal: Math.min(this.currentDimensions.height, 1080),
-            max: 1080,
-          },
-          frameRate: { ideal: 30, max: 60 },
+        // Para móviles, usar resoluciones más comunes y que se adapten mejor
+        const isPortrait = screenHeight > screenWidth
+
+        if (isPortrait) {
+          // Modo portrait - usar resoluciones 4:3 o 16:9 estándar
+          cameraConstraints.video = {
+            facingMode: 'environment',
+            width: {
+              min: 480,
+              ideal: Math.min(screenWidth, 1080),
+              max: 1920,
+            },
+            height: {
+              min: 640,
+              ideal: Math.min(screenHeight, 1920),
+              max: 2560,
+            },
+            aspectRatio: {
+              ideal: screenAspectRatio,
+              min: 0.5,
+              max: 2.0,
+            },
+            frameRate: { ideal: 30, max: 60 },
+          }
+        } else {
+          // Modo landscape
+          cameraConstraints.video = {
+            facingMode: 'environment',
+            width: {
+              min: 640,
+              ideal: Math.min(screenWidth, 1920),
+              max: 1920,
+            },
+            height: {
+              min: 480,
+              ideal: Math.min(screenHeight, 1080),
+              max: 1080,
+            },
+            aspectRatio: {
+              ideal: screenAspectRatio,
+              min: 1.0,
+              max: 2.5,
+            },
+            frameRate: { ideal: 30, max: 60 },
+          }
         }
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia(baseConstraints)
+      console.log('Camera constraints:', cameraConstraints)
+
+      const stream = await navigator.mediaDevices.getUserMedia(cameraConstraints)
 
       // Buscar el elemento de video existente o crear uno nuevo
       this.videoElement = this.container.querySelector('video') || document.createElement('video')
@@ -167,14 +214,28 @@ export class ARManager {
       this.videoElement.playsInline = true
       this.videoElement.muted = true
 
-      // Configurar estilos optimizados para móviles
-      this.applyMobileVideoStyles()
-
       return new Promise((resolve) => {
         this.videoElement.onloadedmetadata = () => {
           this.videoElement.play()
-          console.log(`Video configurado: ${this.videoElement.videoWidth}x${this.videoElement.videoHeight}`)
-          this.adjustVideoForMobile()
+
+          // Obtener las dimensiones reales del video
+          const actualVideoWidth = this.videoElement.videoWidth
+          const actualVideoHeight = this.videoElement.videoHeight
+          const actualAspectRatio = actualVideoWidth / actualVideoHeight
+
+          // Guardar configuración real de la cámara
+          this.cameraConfig.actualResolution = {
+            width: actualVideoWidth,
+            height: actualVideoHeight,
+          }
+          this.cameraConfig.aspectRatio = actualAspectRatio
+
+          console.log(`Video configurado: ${actualVideoWidth}x${actualVideoHeight} (${actualAspectRatio.toFixed(2)})`)
+          console.log(`Pantalla: ${screenWidth}x${screenHeight} (${screenAspectRatio.toFixed(2)})`)
+
+          // Aplicar estilos optimizados
+          this.applyImprovedVideoStyles()
+
           resolve()
         }
       })
@@ -184,28 +245,52 @@ export class ARManager {
     }
   }
 
-  applyMobileVideoStyles() {
+  applyImprovedVideoStyles() {
     if (!this.videoElement) return
 
-    const isMobile = window.innerWidth <= 768
+    const isMobile = this.cameraConfig.isMobile
+    //const videoWidth = this.cameraConfig.actualResolution.width
+    //const videoHeight = this.cameraConfig.actualResolution.height
+    const videoAspectRatio = this.cameraConfig.aspectRatio
+
+    const screenWidth = this.currentDimensions.width
+    const screenHeight = this.currentDimensions.height
+    const screenAspectRatio = screenWidth / screenHeight
+
+    console.log(`Aplicando estilos - Video: ${videoAspectRatio.toFixed(2)}, Pantalla: ${screenAspectRatio.toFixed(2)}`)
 
     if (isMobile) {
-      // Estilos específicos para móviles
-      this.videoElement.style.cssText = `
+      // Para móviles, asegurar que el video llene toda la pantalla correctamente
+      let videoStyles = `
         position: absolute !important;
         top: 50% !important;
         left: 50% !important;
-        min-width: 100% !important;
-        min-height: 100% !important;
-        width: auto !important;
-        height: auto !important;
-        max-width: none !important;
-        max-height: none !important;
         transform: translate(-50%, -50%) !important;
         object-fit: cover !important;
         object-position: center !important;
         z-index: 1 !important;
       `
+
+      // Calcular dimensiones que mantengan la proporción y llenen la pantalla
+      if (videoAspectRatio > screenAspectRatio) {
+        // Video más ancho que pantalla - ajustar por altura
+        videoStyles += `
+          height: 100vh !important;
+          width: ${(100 * videoAspectRatio * screenHeight) / screenWidth}vw !important;
+          min-height: 100vh !important;
+          min-width: 100vw !important;
+        `
+      } else {
+        // Video más alto que pantalla - ajustar por ancho
+        videoStyles += `
+          width: 100vw !important;
+          height: ${(100 * screenWidth) / (videoAspectRatio * screenHeight)}vh !important;
+          min-width: 100vw !important;
+          min-height: 100vh !important;
+        `
+      }
+
+      this.videoElement.style.cssText = videoStyles
     } else {
       // Estilos para desktop
       this.videoElement.style.cssText = `
@@ -221,41 +306,57 @@ export class ARManager {
     }
   }
 
-  adjustVideoForMobile() {
-    if (!this.videoElement) return
+  // Método para obtener las dimensiones reales de captura para móviles
+  getCaptureResolution() {
+    if (!this.videoElement || !this.cameraConfig.actualResolution.width) {
+      return {
+        width: this.currentDimensions.width,
+        height: this.currentDimensions.height,
+      }
+    }
 
-    const isMobile = window.innerWidth <= 768
-    if (!isMobile) return
+    const isMobile = this.cameraConfig.isMobile
 
-    // Obtener dimensiones reales del video
-    const videoWidth = this.videoElement.videoWidth
-    const videoHeight = this.videoElement.videoHeight
-    const screenWidth = window.innerWidth
-    const screenHeight = window.innerHeight
+    if (isMobile) {
+      // Para móviles, usar la resolución real del video
+      const videoWidth = this.cameraConfig.actualResolution.width
+      const videoHeight = this.cameraConfig.actualResolution.height
+      const videoAspectRatio = this.cameraConfig.aspectRatio
 
-    // Calcular el aspect ratio
-    const videoAspectRatio = videoWidth / videoHeight
-    const screenAspectRatio = screenWidth / screenHeight
+      const screenWidth = this.currentDimensions.width
+      const screenHeight = this.currentDimensions.height
+      const screenAspectRatio = screenWidth / screenHeight
 
-    console.log(`Video: ${videoWidth}x${videoHeight} (${videoAspectRatio.toFixed(2)})`)
-    console.log(`Screen: ${screenWidth}x${screenHeight} (${screenAspectRatio.toFixed(2)})`)
+      // Calcular las dimensiones de captura basadas en cómo se muestra el video
+      let captureWidth, captureHeight
 
-    // Ajustar el video para cubrir completamente la pantalla
-    if (videoAspectRatio > screenAspectRatio) {
-      // Video es más ancho que la pantalla
-      this.videoElement.style.width = 'auto'
-      this.videoElement.style.height = '100vh'
-      this.videoElement.style.minHeight = '100vh'
-      this.videoElement.style.minWidth = `${(100 * videoAspectRatio * screenHeight) / screenWidth}vw`
-    } else {
-      // Video es más alto que la pantalla
-      this.videoElement.style.width = '100vw'
-      this.videoElement.style.height = 'auto'
-      this.videoElement.style.minWidth = '100vw'
-      this.videoElement.style.minHeight = `${(100 * screenWidth) / (videoAspectRatio * screenHeight)}vh`
+      if (videoAspectRatio > screenAspectRatio) {
+        // Video más ancho - se corta horizontalmente
+        captureHeight = videoHeight
+        captureWidth = videoHeight * screenAspectRatio
+      } else {
+        // Video más alto - se corta verticalmente
+        captureWidth = videoWidth
+        captureHeight = videoWidth / screenAspectRatio
+      }
+
+      return {
+        width: Math.round(captureWidth),
+        height: Math.round(captureHeight),
+        videoWidth,
+        videoHeight,
+        cropX: Math.round((videoWidth - captureWidth) / 2),
+        cropY: Math.round((videoHeight - captureHeight) / 2),
+      }
+    }
+
+    return {
+      width: this.currentDimensions.width,
+      height: this.currentDimensions.height,
     }
   }
 
+  // [El resto de los métodos permanecen igual...]
   setupRenderer() {
     if (!this.renderer || this.isCleanedUp) return
 
@@ -451,6 +552,7 @@ export class ARManager {
 
       // Actualizar dimensiones
       this.currentDimensions = { width: validWidth, height: validHeight }
+      this.cameraConfig.isMobile = validWidth <= 768
 
       // Redimensionar el renderer
       this.renderer.setSize(validWidth, validHeight)
@@ -461,8 +563,7 @@ export class ARManager {
       this.camera.updateProjectionMatrix()
 
       // Reajustar el video para móviles
-      this.applyMobileVideoStyles()
-      setTimeout(() => this.adjustVideoForMobile(), 100)
+      this.applyImprovedVideoStyles()
 
       // Notificar a MindAR del cambio de tamaño de forma segura
       if (this.mindarInstance && typeof this.mindarInstance.resize === 'function') {

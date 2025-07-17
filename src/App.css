@@ -29,19 +29,16 @@ body.ar-active {
   z-index: 1000;
 }
 
-/* Estilos mejorados para el video de la cámara en móviles */
+/* Estilos mejorados para el video de la cámara - CONFIGURACIÓN BASE */
 .ar-container video {
   position: absolute;
   top: 50%;
   left: 50%;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: auto;
   transform: translate(-50%, -50%);
   object-fit: cover !important;
   object-position: center !important;
   z-index: 1;
+  /* Las dimensiones se establecen dinámicamente por JavaScript */
 }
 
 /* Estilos para el canvas de Three.js */
@@ -64,7 +61,7 @@ body.ar-active {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Responsive adjustments SOLO para modo AR */
+/* Configuración específica para móviles */
 @media (max-width: 768px) {
   body.ar-active {
     position: fixed !important;
@@ -90,21 +87,18 @@ body.ar-active {
     max-height: 100vh !important;
   }
 
-  /* Configuración específica para video en móviles */
+  /* Configuración específica para video en móviles - MUY IMPORTANTE */
   .ar-container video {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    max-width: none;
-    max-height: none;
-    transform: translate(-50%, -50%);
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
     object-fit: cover !important;
     object-position: center !important;
-    z-index: 1;
+    z-index: 1 !important;
+    /* Dimensiones dinámicas controladas por JavaScript */
+    min-width: 100vw !important;
+    min-height: 100vh !important;
   }
 
   /* Configuración específica para la escena AR */
@@ -137,16 +131,11 @@ body.ar-active {
     position: absolute !important;
     top: 50% !important;
     left: 50% !important;
-    min-width: 100% !important;
-    min-height: 100% !important;
-    width: auto !important;
-    height: auto !important;
-    max-width: none !important;
-    max-height: none !important;
     transform: translate(-50%, -50%) !important;
     object-fit: cover !important;
     object-position: center !important;
     z-index: 1 !important;
+    /* Las dimensiones se controlan por JavaScript para evitar distorsión */
   }
 
   /* Prevenir el bounce en iOS */
@@ -156,7 +145,7 @@ body.ar-active {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Estilos para el preview de fotos */
+  /* Estilos para el preview de fotos mejorado */
   .photo-preview-overlay {
     position: fixed !important;
     top: 0 !important;
@@ -212,15 +201,12 @@ body.ar-active {
   }
 }
 
-/* Configuración específica para diferentes orientaciones */
+/* Configuración específica para diferentes orientaciones - MEJORADO */
 @media screen and (max-width: 768px) and (orientation: portrait) {
   .ar-container video,
   .ar-scene-capture-target video {
-    /* En portrait, asegurar que el video cubra toda la pantalla */
-    min-width: 100vw !important;
-    min-height: 100vh !important;
-    width: auto !important;
-    height: auto !important;
+    /* En portrait, las dimensiones se controlan por JavaScript */
+    /* para mantener el aspect ratio correcto */
   }
 }
 
@@ -236,11 +222,8 @@ body.ar-active {
 
   .ar-container video,
   .ar-scene-capture-target video {
-    /* En landscape, ajustar para pantallas anchas */
-    min-width: 100vw !important;
-    min-height: 100vh !important;
-    width: auto !important;
-    height: auto !important;
+    /* En landscape, las dimensiones se controlan por JavaScript */
+    /* para evitar distorsión */
   }
 }
 
@@ -334,25 +317,71 @@ body:not(.ar-active) {
   min-height: 100vh;
 }
 
-/* Estilos específicos para dispositivos con aspect ratios problemáticos */
+/* Estilos específicos para dispositivos con aspect ratios problemáticos - MEJORADO */
 @media screen and (max-width: 768px) and (max-aspect-ratio: 1/2) {
   /* Dispositivos muy altos (como iPhone X/11/12/13/14 Pro Max) */
-  .ar-container video,
-  .ar-scene-capture-target video {
-    min-width: 100vw !important;
-    width: 100vw !important;
-    height: auto !important;
-    min-height: 100vh !important;
-  }
+  /* Las dimensiones se controlan por JavaScript */
 }
 
 @media screen and (max-width: 768px) and (min-aspect-ratio: 2/1) {
   /* Dispositivos muy anchos en landscape */
-  .ar-container video,
-  .ar-scene-capture-target video {
-    min-height: 100vh !important;
-    height: 100vh !important;
-    width: auto !important;
-    min-width: 100vw !important;
-  }
+  /* Las dimensiones se controlan por JavaScript */
+}
+
+/* Nuevos estilos para debug de cámara */
+.camera-debug-info {
+  position: fixed;
+  bottom: 4px;
+  left: 4px;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 10px;
+  max-width: 200px;
+  backdrop-filter: blur(5px);
+}
+
+/* Indicador visual para aspect ratio correcto */
+.aspect-ratio-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.aspect-ratio-indicator.correct {
+  color: #4ade80;
+}
+
+.aspect-ratio-indicator.incorrect {
+  color: #f87171;
+}
+
+/* Estilos para mejorar la captura de fotos */
+.capture-helper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Overlay para mostrar el área de captura */
+.capture-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 10;
 }
