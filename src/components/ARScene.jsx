@@ -288,6 +288,7 @@ const ARScene = () => {
             arManagerRef={arManagerRef}
             modelType={modelType}
             isVisible={!loading && isTargetFound}
+            isMobile={isMobile}
             onControlsToggle={setShowAnimationControls}
           />
 
