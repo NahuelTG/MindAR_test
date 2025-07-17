@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 const GameNotifications = () => {
   const [notifications, setNotifications] = useState([])
   const [nextId, setNextId] = useState(1)
+  const [lastAnimationIndex, setLastAnimationIndex] = useState(null) // Para evitar duplicados
 
   useEffect(() => {
     const handleGameNotification = (event) => {
@@ -29,33 +30,41 @@ const GameNotifications = () => {
     window.addEventListener('gameNotification', handleGameNotification)
 
     // Listen for animation changes to show tips
-    window.addEventListener('wolfAnimationChanged', (event) => {
-      const animationTips = {
-        0: '🌲 ¡Modo Explorador! Responde preguntas sobre la naturaleza',
-        1: '🔤 ¡Modo Cazador! Forma palabras relacionadas con lobos',
-        2: '🧠 ¡Modo Líder! Memoriza secuencias como un alfa',
-        3: '🎵 ¡Modo Guardián! Identifica sonidos de la naturaleza',
-        4: '🎯 ¡Modo Salvaje! Planifica estrategias de caza',
-      }
+    const handleAnimationChanged = (event) => {
+      const animationIndex = event.detail.animationIndex
 
-      const tip = animationTips[event.detail.animationIndex]
-      if (tip) {
-        window.dispatchEvent(
-          new CustomEvent('gameNotification', {
+      // Solo mostrar si es diferente al último índice mostrado
+      if (animationIndex !== lastAnimationIndex) {
+        setLastAnimationIndex(animationIndex)
+
+        const animationTips = {
+          0: '🌲 ¡Modo Explorador! Responde preguntas sobre la naturaleza',
+          1: '🔤 ¡Modo Cazador! Forma palabras relacionadas con lobos',
+          2: '🧠 ¡Modo Líder! Memoriza secuencias como un alfa',
+          3: '🎵 ¡Modo Guardián! Identifica sonidos de la naturaleza',
+          4: '🎯 ¡Modo Salvaje! Planifica estrategias de caza',
+        }
+
+        const tip = animationTips[animationIndex]
+        if (tip) {
+          handleGameNotification({
             detail: {
               type: 'tip',
               message: tip,
               duration: 4000,
             },
           })
-        )
+        }
       }
-    })
+    }
+
+    window.addEventListener('wolfAnimationChanged', handleAnimationChanged)
 
     return () => {
       window.removeEventListener('gameNotification', handleGameNotification)
+      window.removeEventListener('wolfAnimationChanged', handleAnimationChanged)
     }
-  }, [nextId])
+  }, [nextId, lastAnimationIndex])
 
   const getNotificationStyle = (type) => {
     const baseStyle = 'mb-2 p-3 rounded-lg shadow-lg border backdrop-blur-sm transform transition-all duration-300 animate-slideIn'

@@ -4,7 +4,7 @@ import { getGameByAnimation } from '@/assets/ar/games/wolfGamesData'
 import { showGameNotification } from './GameNotifications'
 import { useWorldProjection } from '@/hooks/useWorldProjection'
 
-const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManagerRef }) => {
+const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManagerRef, hideWhenControlsVisible = false }) => {
   const [gameData, setGameData] = useState(null)
   const [gameState, setGameState] = useState('waiting')
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -17,6 +17,7 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
   const [currentSequenceIndex, setCurrentSequenceIndex] = useState(0)
   const [totalGamesPlayed, setTotalGamesPlayed] = useState(0)
   const [isMinimized, setIsMinimized] = useState(false)
+  const [isCompact, setIsCompact] = useState(false)
 
   // Memoizar la condición de visibilidad para evitar re-renders innecesarios
   const shouldShowProjection = useMemo(() => {
@@ -38,6 +39,11 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
     return { x: 0, y: 0, isVisible: false }
   }, [isProjectorReady, screenPosition.isVisible, screenPosition.x, screenPosition.y, getOptimalPopupPosition])
 
+  // Determinar si el popup debe ser visible
+  const shouldShowPopup = useMemo(() => {
+    return gameData && popupPosition.isVisible && !hideWhenControlsVisible
+  }, [gameData, popupPosition.isVisible, hideWhenControlsVisible])
+
   // Usar useCallback para las funciones que no cambian frecuentemente
   const resetGame = useCallback(() => {
     setGameState('waiting')
@@ -50,6 +56,7 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
     setShowSequence(false)
     setCurrentSequenceIndex(0)
     setIsMinimized(false)
+    setIsCompact(false)
   }, [])
 
   const startMemoryGame = useCallback(() => {
@@ -343,7 +350,7 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
     )
   }
 
-  if (!gameData || !popupPosition.isVisible) return null
+  if (!shouldShowPopup) return null
 
   const connectionAngle = getConnectionAngle(popupPosition)
 
@@ -365,12 +372,11 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
 
       {/* Pop-up flotante desde el lobo */}
       <div
-        className="absolute z-50 pointer-events-auto transform-gpu"
+        className="absolute z-50 pointer-events-auto transform-gpu transition-all duration-500 ease-in-out"
         style={{
-          left: popupPosition.x,
+          left: isCompact ? popupPosition.x + 200 : popupPosition.x,
           top: popupPosition.y,
-          width: '320px',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          width: isCompact ? '120px' : '320px',
           transform: isMinimized ? 'scale(0.9)' : 'scale(1)',
           opacity: popupPosition.isVisible ? 1 : 0,
         }}
@@ -393,18 +399,29 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
           <div className="flex items-center justify-between p-3 border-b border-gray-700 relative z-10">
             <div className="flex items-center gap-2">
               <span className="text-lg animate-pulse">🐺</span>
-              <div>
-                <h3 className="text-sm font-bold text-purple-400">{gameData.title}</h3>
-                <p className="text-xs text-gray-400">El lobo te desafía</p>
-              </div>
+              {!isCompact && (
+                <div>
+                  <h3 className="text-sm font-bold text-purple-400">{gameData.title}</h3>
+                  <p className="text-xs text-gray-400">El lobo te desafía</p>
+                </div>
+              )}
             </div>
             <div className="flex gap-1">
+              {!isCompact && (
+                <button
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="w-6 h-6 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs flex items-center justify-center transition-colors active:scale-95"
+                  title={isMinimized ? 'Expandir' : 'Minimizar'}
+                >
+                  {isMinimized ? '▲' : '▼'}
+                </button>
+              )}
               <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="w-6 h-6 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs flex items-center justify-center transition-colors active:scale-95"
-                title={isMinimized ? 'Expandir' : 'Minimizar'}
+                onClick={() => setIsCompact(!isCompact)}
+                className="w-6 h-6 rounded bg-gray-700 hover:bg-blue-600 text-white text-xs flex items-center justify-center transition-colors active:scale-95"
+                title={isCompact ? 'Expandir popup' : 'Modo compacto'}
               >
-                {isMinimized ? '▲' : '▼'}
+                👁️
               </button>
               <button
                 onClick={resetGame}
@@ -420,8 +437,8 @@ const FloatingGamePopup = ({ currentAnimation, isVisible, isTargetFound, arManag
           <div
             className="overflow-hidden transition-all duration-300 ease-in-out"
             style={{
-              maxHeight: isMinimized ? '0px' : '400px',
-              opacity: isMinimized ? 0 : 1,
+              maxHeight: isMinimized || isCompact ? '0px' : '400px',
+              opacity: isMinimized || isCompact ? 0 : 1,
             }}
           >
             <div className="p-3 relative z-10">
