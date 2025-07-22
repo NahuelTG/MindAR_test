@@ -163,16 +163,27 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
     switch (strategy) {
       case 'full_video':
         return { icon: '✅', color: 'text-green-400', desc: 'Óptimo: Sin crop' }
+      case 'mobile_crop_horizontal':
+        return { icon: '🔧', color: 'text-yellow-400', desc: 'MÓVIL: Crop horizontal centrado' }
+      case 'mobile_crop_vertical':
+        return { icon: '🔧', color: 'text-orange-400', desc: 'MÓVIL: Crop vertical centrado' }
+      case 'mobile_extreme_scale':
+        return { icon: '🚨', color: 'text-red-400', desc: 'MÓVIL: Escalado para caso extremo' }
+      case 'mobile_scale_to_screen':
+        return { icon: '📐', color: 'text-blue-400', desc: 'MÓVIL: Escalado a pantalla (anti-crop)' }
+      // Estrategias legacy
       case 'crop_horizontal':
-        return { icon: '🔧', color: 'text-yellow-400', desc: 'Crop horizontal centrado' }
+        return { icon: '🔧', color: 'text-yellow-300', desc: 'LEGACY: Crop horizontal' }
       case 'crop_vertical':
-        return { icon: '🔧', color: 'text-orange-400', desc: 'Crop vertical centrado' }
+        return { icon: '🔧', color: 'text-orange-300', desc: 'LEGACY: Crop vertical' }
       case 'extreme_scale':
-        return { icon: '🚨', color: 'text-red-400', desc: 'Escalado para caso extremo' }
+        return { icon: '🚨', color: 'text-red-300', desc: 'LEGACY: Escalado extremo' }
       case 'scale_to_screen':
-        return { icon: '📐', color: 'text-blue-400', desc: 'Escalado a pantalla (evita crop excesivo)' }
+        return { icon: '📐', color: 'text-blue-300', desc: 'LEGACY: Escalado a pantalla' }
       case 'desktop':
-        return { icon: '🖥️', color: 'text-blue-400', desc: 'Modo desktop' }
+        return { icon: '🖥️', color: 'text-gray-400', desc: 'DESKTOP (problema en móvil!)' }
+      case 'fallback':
+        return { icon: '❓', color: 'text-gray-400', desc: 'Fallback' }
       default:
         return { icon: '❓', color: 'text-gray-400', desc: 'Desconocido' }
     }
@@ -253,20 +264,40 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
         <div className="text-xs text-gray-400 pt-2">
           <div className="font-semibold text-white mb-1">Estado:</div>
 
+          {debugInfo.capture.strategy?.startsWith('mobile_') && (
+            <div className="text-green-300">📱 Estrategia específica de móvil activa</div>
+          )}
+
+          {debugInfo.capture.strategy === 'desktop' && debugInfo.cameraConfig?.isMobile && (
+            <div className="text-red-300">🚨 ERROR: Móvil usando estrategia desktop</div>
+          )}
+
           {debugInfo.capture.strategy === 'full_video' && <div className="text-green-300">✨ Configuración óptima</div>}
 
-          {debugInfo.capture.strategy.includes('crop') && <div className="text-yellow-300">🔧 Crop aplicado correctamente</div>}
+          {debugInfo.capture.strategy?.includes('crop') && <div className="text-yellow-300">🔧 Crop aplicado correctamente</div>}
+
+          {debugInfo.capture.strategy?.includes('scale') && <div className="text-blue-300">📐 Escalado para evitar deformación</div>}
 
           {Math.abs(debugInfo.video.aspectRatio - debugInfo.screen.aspectRatio) < 0.05 && (
             <div className="text-green-300">🎯 Aspect ratios coinciden</div>
           )}
 
-          {debugInfo.cameraConfig?.isMobile && <div className="text-blue-300">📱 Modo móvil activo</div>}
+          {debugInfo.cameraConfig?.isMobile && <div className="text-blue-300">📱 Modo móvil detectado</div>}
         </div>
 
-        {/* Indicadores de problemas */}
+        {/* Indicadores de problemas específicos */}
+        {debugInfo.capture.strategy === 'desktop' && debugInfo.cameraConfig?.isMobile && (
+          <div className="text-red-300 text-xs mt-2 p-2 bg-red-900 bg-opacity-50 rounded border border-red-600">
+            <div className="font-bold">🚨 BUG DETECTADO:</div>
+            <div>Dispositivo móvil usando estrategia desktop</div>
+            <div>Esto causa recorte incorrecto en la captura</div>
+          </div>
+        )}
+
         {debugInfo.video.aspectRatio > 0 && Math.abs(debugInfo.video.aspectRatio - debugInfo.screen.aspectRatio) > 0.2 && (
-          <div className="text-red-300 text-xs mt-2 p-1 bg-red-900 bg-opacity-30 rounded">⚠️ Gran diferencia en aspect ratios</div>
+          <div className="text-yellow-300 text-xs mt-2 p-1 bg-yellow-900 bg-opacity-30 rounded">
+            ⚠️ Gran diferencia en aspect ratios (AR diff: {Math.abs(debugInfo.video.aspectRatio - debugInfo.screen.aspectRatio).toFixed(3)})
+          </div>
         )}
       </div>
     </div>
