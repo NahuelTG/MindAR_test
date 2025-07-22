@@ -1,4 +1,4 @@
-// ComposedCaptureStrategy.js - Completamente reescrito para móviles
+// ComposedCaptureStrategy.js - Mejorado para casos extremos
 import { CaptureStrategy } from './CaptureStrategy'
 
 export class ComposedCaptureStrategy extends CaptureStrategy {
@@ -10,7 +10,7 @@ export class ComposedCaptureStrategy extends CaptureStrategy {
       strategy: 'fallback',
     }
 
-    console.log('📸 Capturando con nueva lógica:', captureResolution)
+    console.log('📸 Capturando con lógica anti-deformación:', captureResolution)
 
     // Crear canvas con las dimensiones correctas
     const canvas = document.createElement('canvas')
@@ -18,11 +18,11 @@ export class ComposedCaptureStrategy extends CaptureStrategy {
     canvas.height = captureResolution.height
     const ctx = canvas.getContext('2d')
 
-    // 1. Capturar video de fondo con la nueva lógica
+    // 1. Capturar video de fondo con la nueva lógica mejorada
     const videoElement = this.sceneRef.current?.querySelector('video')
     if (videoElement && videoElement.videoWidth > 0) {
       if (captureResolution.strategy === 'full_video') {
-        // ✅ Caso 1: Usar toda la imagen del video (aspect ratios coinciden)
+        // ✅ Caso 1: Usar toda la imagen del video (aspect ratios similares)
         console.log('✅ Usando toda la imagen del video')
         ctx.drawImage(
           videoElement,
@@ -36,35 +36,63 @@ export class ComposedCaptureStrategy extends CaptureStrategy {
           captureResolution.height // destino: todo el canvas
         )
       } else if (captureResolution.strategy === 'crop_horizontal') {
-        // 🔧 Caso 2: Crop horizontal (video más ancho)
-        console.log('🔧 Aplicando crop horizontal inteligente')
+        // 🔧 Caso 2: Crop horizontal centrado (video más ancho)
+        console.log('🔧 Aplicando crop horizontal centrado')
         ctx.drawImage(
           videoElement,
           captureResolution.cropX,
           0,
           captureResolution.width,
-          captureResolution.height, // fuente: crop horizontal
+          captureResolution.height, // fuente: crop horizontal centrado
           0,
           0,
           captureResolution.width,
           captureResolution.height // destino: todo el canvas
         )
       } else if (captureResolution.strategy === 'crop_vertical') {
-        // 🔧 Caso 3: Crop vertical (video más alto)
-        console.log('🔧 Aplicando crop vertical inteligente')
+        // 🔧 Caso 3: Crop vertical centrado (video más alto)
+        console.log('🔧 Aplicando crop vertical centrado')
         ctx.drawImage(
           videoElement,
           0,
           captureResolution.cropY,
           captureResolution.width,
-          captureResolution.height, // fuente: crop vertical
+          captureResolution.height, // fuente: crop vertical centrado
           0,
           0,
           captureResolution.width,
           captureResolution.height // destino: todo el canvas
         )
+      } else if (captureResolution.strategy === 'extreme_scale') {
+        // 🚨 Caso 4: Escalado para casos extremos
+        console.log('🚨 Aplicando escalado para caso extremo')
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight, // fuente: todo el video original
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height // destino: escalado al tamaño calculado
+        )
+      } else if (captureResolution.strategy === 'scale_to_screen') {
+        // 📐 Caso 5: Escalado directo a pantalla (evitar crops excesivos)
+        console.log('📐 Escalado directo a dimensiones de pantalla')
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight, // fuente: todo el video
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height // destino: escalado a pantalla
+        )
       } else {
-        // 🖥️ Caso 4: Desktop o fallback
+        // 🖥️ Caso 6: Desktop o fallback
         console.log('🖥️ Usando lógica de desktop/fallback')
         ctx.drawImage(videoElement, 0, 0, captureResolution.width, captureResolution.height)
       }
@@ -102,7 +130,7 @@ export class ComposedCaptureStrategy extends CaptureStrategy {
   }
 }
 
-// RendererCaptureStrategy.js - Mejorado para móviles
+// RendererCaptureStrategy.js - Mejorado para casos extremos
 export class RendererCaptureStrategy extends CaptureStrategy {
   async capture() {
     const renderer = this.arManagerRef.current?.renderer
@@ -115,7 +143,7 @@ export class RendererCaptureStrategy extends CaptureStrategy {
       strategy: 'fallback',
     }
 
-    console.log('📸 RendererCapture con nueva lógica:', captureResolution)
+    console.log('📸 RendererCapture con lógica anti-deformación:', captureResolution)
 
     // Forzar renderizado antes de capturar
     renderer.render(this.arManagerRef.current.scene, this.arManagerRef.current.camera)
@@ -128,7 +156,7 @@ export class RendererCaptureStrategy extends CaptureStrategy {
     finalCanvas.height = captureResolution.height
     const ctx = finalCanvas.getContext('2d')
 
-    // Primero el video de fondo usando la nueva lógica
+    // Primero el video de fondo usando la nueva lógica mejorada
     const videoElement = this.sceneRef.current?.querySelector('video')
     if (videoElement && videoElement.videoWidth > 0) {
       if (captureResolution.strategy === 'full_video') {
@@ -145,7 +173,7 @@ export class RendererCaptureStrategy extends CaptureStrategy {
           captureResolution.height
         )
       } else if (captureResolution.strategy === 'crop_horizontal') {
-        // 🔧 Crop horizontal
+        // 🔧 Crop horizontal centrado
         ctx.drawImage(
           videoElement,
           captureResolution.cropX,
@@ -158,13 +186,39 @@ export class RendererCaptureStrategy extends CaptureStrategy {
           captureResolution.height
         )
       } else if (captureResolution.strategy === 'crop_vertical') {
-        // 🔧 Crop vertical
+        // 🔧 Crop vertical centrado
         ctx.drawImage(
           videoElement,
           0,
           captureResolution.cropY,
           captureResolution.width,
           captureResolution.height,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'extreme_scale') {
+        // 🚨 Escalado para caso extremo
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'scale_to_screen') {
+        // 📐 Escalado a pantalla
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight,
           0,
           0,
           captureResolution.width,
@@ -189,7 +243,7 @@ export class RendererCaptureStrategy extends CaptureStrategy {
   }
 }
 
-// WebGLCaptureStrategy.js - Mejorado para móviles
+// WebGLCaptureStrategy.js - Mejorado para casos extremos
 export class WebGLCaptureStrategy extends CaptureStrategy {
   async capture() {
     const canvas = this.sceneRef.current?.querySelector('canvas')
@@ -205,7 +259,7 @@ export class WebGLCaptureStrategy extends CaptureStrategy {
       strategy: 'fallback',
     }
 
-    console.log('📸 WebGLCapture con nueva lógica:', captureResolution)
+    console.log('📸 WebGLCapture con lógica anti-deformación:', captureResolution)
 
     // Crear canvas de composición con las dimensiones correctas
     const compositeCanvas = document.createElement('canvas')
@@ -213,7 +267,7 @@ export class WebGLCaptureStrategy extends CaptureStrategy {
     compositeCanvas.height = captureResolution.height
     const ctx = compositeCanvas.getContext('2d')
 
-    // Fondo de video usando la nueva lógica
+    // Fondo de video usando la nueva lógica mejorada
     const videoElement = this.sceneRef.current?.querySelector('video')
     if (videoElement && videoElement.videoWidth > 0) {
       if (captureResolution.strategy === 'full_video') {
@@ -230,7 +284,7 @@ export class WebGLCaptureStrategy extends CaptureStrategy {
           captureResolution.height
         )
       } else if (captureResolution.strategy === 'crop_horizontal') {
-        // 🔧 Crop horizontal
+        // 🔧 Crop horizontal centrado
         ctx.drawImage(
           videoElement,
           captureResolution.cropX,
@@ -243,13 +297,39 @@ export class WebGLCaptureStrategy extends CaptureStrategy {
           captureResolution.height
         )
       } else if (captureResolution.strategy === 'crop_vertical') {
-        // 🔧 Crop vertical
+        // 🔧 Crop vertical centrado
         ctx.drawImage(
           videoElement,
           0,
           captureResolution.cropY,
           captureResolution.width,
           captureResolution.height,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'extreme_scale') {
+        // 🚨 Escalado para caso extremo
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'scale_to_screen') {
+        // 📐 Escalado a pantalla
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight,
           0,
           0,
           captureResolution.width,

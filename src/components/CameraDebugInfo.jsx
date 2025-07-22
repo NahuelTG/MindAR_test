@@ -164,9 +164,13 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
       case 'full_video':
         return { icon: '✅', color: 'text-green-400', desc: 'Óptimo: Sin crop' }
       case 'crop_horizontal':
-        return { icon: '🔧', color: 'text-yellow-400', desc: 'Crop horizontal' }
+        return { icon: '🔧', color: 'text-yellow-400', desc: 'Crop horizontal centrado' }
       case 'crop_vertical':
-        return { icon: '🔧', color: 'text-orange-400', desc: 'Crop vertical' }
+        return { icon: '🔧', color: 'text-orange-400', desc: 'Crop vertical centrado' }
+      case 'extreme_scale':
+        return { icon: '🚨', color: 'text-red-400', desc: 'Escalado para caso extremo' }
+      case 'scale_to_screen':
+        return { icon: '📐', color: 'text-blue-400', desc: 'Escalado a pantalla (evita crop excesivo)' }
       case 'desktop':
         return { icon: '🖥️', color: 'text-blue-400', desc: 'Modo desktop' }
       default:
