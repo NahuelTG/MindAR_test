@@ -337,18 +337,18 @@ export class ARManager {
         // Diferencia muy grande (como 2.013 vs 0.497)
         console.log('🚨 MÓVIL: Aspect ratios MUY diferentes, usando estrategia conservadora')
 
-        // Para tu caso específico: forzar escalado a pantalla sin crop
-        console.log('📐 MÓVIL: Aplicando escalado directo para evitar deformación')
+        // FIXED: Para tu caso específico, usar EXACTAMENTE las dimensiones de pantalla
+        console.log('📐 MÓVIL: Forzando dimensiones exactas de pantalla para evitar recorte')
 
         return {
-          width: screenWidth,
-          height: screenHeight,
-          strategy: 'mobile_extreme_scale',
+          width: screenWidth, // 411 (exacto)
+          height: screenHeight, // 827 (exacto, NO 883)
+          strategy: 'mobile_extreme_scale_fixed',
           videoWidth,
           videoHeight,
           cropX: 0,
           cropY: 0,
-          note: `MÓVIL: Escalado directo ${screenWidth}x${screenHeight} (AR diff: ${aspectRatioDiff.toFixed(3)})`,
+          note: `MÓVIL FIXED: Escalado exacto a pantalla ${screenWidth}x${screenHeight} (AR diff: ${aspectRatioDiff.toFixed(3)})`,
         }
       }
 
