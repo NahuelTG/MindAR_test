@@ -282,7 +282,7 @@ export class ARManager {
     }
   }
 
-  // ============ MÉTODO DE CAPTURA MEJORADO (MANEJO DE CASOS EXTREMOS) ============
+  // ============ MÉTODO DE CAPTURA MEJORADO (CORREGIDO DETECCIÓN MÓVIL) ============
   getCaptureResolution() {
     if (!this.videoElement || !this.cameraConfig.actualResolution.width) {
       return {
@@ -292,7 +292,13 @@ export class ARManager {
       }
     }
 
-    const isMobile = this.cameraConfig.isMobile
+    // ============ FIX: VERIFICAR CORRECTAMENTE SI ES MÓVIL ============
+    const isMobile = this.cameraConfig.isMobile || this.currentDimensions.width <= 768
+
+    console.log(`🔍 Verificación de dispositivo:`)
+    console.log(`   📱 this.cameraConfig.isMobile: ${this.cameraConfig.isMobile}`)
+    console.log(`   📏 this.currentDimensions.width: ${this.currentDimensions.width}`)
+    console.log(`   🎯 isMobile final: ${isMobile}`)
 
     if (isMobile) {
       const videoWidth = this.cameraConfig.actualResolution.width
@@ -303,7 +309,7 @@ export class ARManager {
       const screenHeight = this.currentDimensions.height
       const screenAspectRatio = screenWidth / screenHeight
 
-      console.log(`🔍 Análisis de captura móvil:`)
+      console.log(`🔍 Análisis de captura móvil (FORZADO):`)
       console.log(`   📹 Video: ${videoWidth}x${videoHeight} (AR: ${videoAspectRatio.toFixed(3)})`)
       console.log(`   📱 Pantalla: ${screenWidth}x${screenHeight} (AR: ${screenAspectRatio.toFixed(3)})`)
 
@@ -322,67 +328,33 @@ export class ARManager {
           videoHeight,
           cropX: 0,
           cropY: 0,
-          note: 'AR similares: usando toda la imagen',
+          note: 'MÓVIL: AR similares, usando toda la imagen',
         }
       }
 
       // ============ CASOS EXTREMOS: MUY DIFERENTES ============
       else if (aspectRatioDiff > 1.0) {
-        // Diferencia muy grande (como 2.012 vs 0.497)
-        console.log('🚨 Aspect ratios MUY diferentes, usando estrategia conservadora')
+        // Diferencia muy grande (como 2.013 vs 0.497)
+        console.log('🚨 MÓVIL: Aspect ratios MUY diferentes, usando estrategia conservadora')
 
-        // Para casos extremos: usar las dimensiones de pantalla y adaptar del video
-        // Esto evita crops extremos que causan deformación
+        // Para tu caso específico: forzar escalado a pantalla sin crop
+        console.log('📐 MÓVIL: Aplicando escalado directo para evitar deformación')
 
-        // Calcular qué dimensión del video usar como base
-        const screenArea = screenWidth * screenHeight
-        const videoArea = videoWidth * videoHeight
-
-        if (videoArea > screenArea * 4) {
-          // Video mucho más grande
-          console.log('📐 Video muy grande, escalando a tamaño de pantalla')
-
-          // Escalar proporcionalmente para que quepa en la pantalla
-          let newWidth, newHeight
-
-          if (videoAspectRatio > screenAspectRatio) {
-            // Video más ancho: ajustar por altura de pantalla
-            newHeight = screenHeight
-            newWidth = Math.round(newHeight * videoAspectRatio)
-
-            // Si el ancho resultante es demasiado grande, limitar
-            if (newWidth > screenWidth * 2) {
-              newWidth = screenWidth
-              newHeight = Math.round(newWidth / videoAspectRatio)
-            }
-          } else {
-            // Video más alto: ajustar por ancho de pantalla
-            newWidth = screenWidth
-            newHeight = Math.round(newWidth / videoAspectRatio)
-
-            // Si la altura resultante es demasiado grande, limitar
-            if (newHeight > screenHeight * 2) {
-              newHeight = screenHeight
-              newWidth = Math.round(newHeight * videoAspectRatio)
-            }
-          }
-
-          return {
-            width: newWidth,
-            height: newHeight,
-            strategy: 'extreme_scale',
-            videoWidth,
-            videoHeight,
-            cropX: 0,
-            cropY: 0,
-            note: `Caso extremo: escalado a ${newWidth}x${newHeight}`,
-          }
+        return {
+          width: screenWidth,
+          height: screenHeight,
+          strategy: 'mobile_extreme_scale',
+          videoWidth,
+          videoHeight,
+          cropX: 0,
+          cropY: 0,
+          note: `MÓVIL: Escalado directo ${screenWidth}x${screenHeight} (AR diff: ${aspectRatioDiff.toFixed(3)})`,
         }
       }
 
       // ============ CASOS NORMALES CON MEJORAS ============
       else {
-        console.log('🔧 Aplicando crop inteligente mejorado')
+        console.log('🔧 MÓVIL: Aplicando crop inteligente mejorado')
 
         if (videoAspectRatio > screenAspectRatio) {
           // Video más ancho: crop horizontal CENTRADO
@@ -393,30 +365,30 @@ export class ARManager {
           const cropPercentage = (cropX * 2) / videoWidth
 
           if (cropPercentage > 0.4) {
-            console.log('⚠️ Crop horizontal excesivo, usando escalado')
+            console.log('⚠️ MÓVIL: Crop horizontal excesivo, usando escalado')
             return {
               width: screenWidth,
               height: screenHeight,
-              strategy: 'scale_to_screen',
+              strategy: 'mobile_scale_to_screen',
               videoWidth,
               videoHeight,
               cropX: 0,
               cropY: 0,
-              note: `Evitando crop excesivo (${(cropPercentage * 100).toFixed(1)}%)`,
+              note: `MÓVIL: Evitando crop excesivo (${(cropPercentage * 100).toFixed(1)}%)`,
             }
           }
 
-          console.log(`🔧 Crop horizontal: ${targetWidth}x${videoHeight}, cropX: ${cropX}`)
+          console.log(`🔧 MÓVIL: Crop horizontal: ${targetWidth}x${videoHeight}, cropX: ${cropX}`)
 
           return {
             width: targetWidth,
             height: videoHeight,
-            strategy: 'crop_horizontal',
+            strategy: 'mobile_crop_horizontal',
             videoWidth,
             videoHeight,
             cropX,
             cropY: 0,
-            note: `Crop horizontal centrado: ${cropX}px por lado`,
+            note: `MÓVIL: Crop horizontal centrado ${cropX}px por lado`,
           }
         } else {
           // Video más alto: crop vertical CENTRADO
@@ -427,40 +399,42 @@ export class ARManager {
           const cropPercentage = (cropY * 2) / videoHeight
 
           if (cropPercentage > 0.4) {
-            console.log('⚠️ Crop vertical excesivo, usando escalado')
+            console.log('⚠️ MÓVIL: Crop vertical excesivo, usando escalado')
             return {
               width: screenWidth,
               height: screenHeight,
-              strategy: 'scale_to_screen',
+              strategy: 'mobile_scale_to_screen',
               videoWidth,
               videoHeight,
               cropX: 0,
               cropY: 0,
-              note: `Evitando crop excesivo (${(cropPercentage * 100).toFixed(1)}%)`,
+              note: `MÓVIL: Evitando crop excesivo (${(cropPercentage * 100).toFixed(1)}%)`,
             }
           }
 
-          console.log(`🔧 Crop vertical: ${videoWidth}x${targetHeight}, cropY: ${cropY}`)
+          console.log(`🔧 MÓVIL: Crop vertical: ${videoWidth}x${targetHeight}, cropY: ${cropY}`)
 
           return {
             width: videoWidth,
             height: targetHeight,
-            strategy: 'crop_vertical',
+            strategy: 'mobile_crop_vertical',
             videoWidth,
             videoHeight,
             cropX: 0,
             cropY,
-            note: `Crop vertical centrado: ${cropY}px arriba y abajo`,
+            note: `MÓVIL: Crop vertical centrado ${cropY}px arriba/abajo`,
           }
         }
       }
     }
 
     // Desktop: sin cambios
+    console.log('🖥️ Aplicando estrategia desktop')
     return {
       width: this.currentDimensions.width,
       height: this.currentDimensions.height,
       strategy: 'desktop',
+      note: 'DESKTOP: Sin modificaciones',
     }
   }
 
