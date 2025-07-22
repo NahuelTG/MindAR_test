@@ -1,15 +1,16 @@
-// ComposedCaptureStrategy.js - Mejorado para móviles
+// ComposedCaptureStrategy.js - Completamente reescrito para móviles
 import { CaptureStrategy } from './CaptureStrategy'
 
 export class ComposedCaptureStrategy extends CaptureStrategy {
   async capture() {
-    // Obtener dimensiones correctas para la captura
+    // Obtener dimensiones correctas para la captura usando la nueva lógica
     const captureResolution = this.arManagerRef.current?.getCaptureResolution?.() || {
       width: this.dimensions.width,
       height: this.dimensions.height,
+      strategy: 'fallback',
     }
 
-    console.log('Capturando con resolución:', captureResolution)
+    console.log('📸 Capturando con nueva lógica:', captureResolution)
 
     // Crear canvas con las dimensiones correctas
     const canvas = document.createElement('canvas')
@@ -17,30 +18,59 @@ export class ComposedCaptureStrategy extends CaptureStrategy {
     canvas.height = captureResolution.height
     const ctx = canvas.getContext('2d')
 
-    // 1. Capturar video de fondo con las dimensiones correctas
+    // 1. Capturar video de fondo con la nueva lógica
     const videoElement = this.sceneRef.current?.querySelector('video')
     if (videoElement && videoElement.videoWidth > 0) {
-      // Para móviles, usar la información de crop si está disponible
-      if (captureResolution.cropX !== undefined && captureResolution.cropY !== undefined) {
-        // Dibujar solo la parte visible del video (croppeada)
+      if (captureResolution.strategy === 'full_video') {
+        // ✅ Caso 1: Usar toda la imagen del video (aspect ratios coinciden)
+        console.log('✅ Usando toda la imagen del video')
         ctx.drawImage(
           videoElement,
-          captureResolution.cropX, // sx - punto de inicio x en el video
-          captureResolution.cropY, // sy - punto de inicio y en el video
-          captureResolution.width, // sWidth - ancho a copiar del video
-          captureResolution.height, // sHeight - alto a copiar del video
-          0, // dx - punto de destino x en el canvas
-          0, // dy - punto de destino y en el canvas
-          captureResolution.width, // dWidth - ancho en el canvas de destino
-          captureResolution.height // dHeight - alto en el canvas de destino
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight, // fuente: todo el video
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height // destino: todo el canvas
+        )
+      } else if (captureResolution.strategy === 'crop_horizontal') {
+        // 🔧 Caso 2: Crop horizontal (video más ancho)
+        console.log('🔧 Aplicando crop horizontal inteligente')
+        ctx.drawImage(
+          videoElement,
+          captureResolution.cropX,
+          0,
+          captureResolution.width,
+          captureResolution.height, // fuente: crop horizontal
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height // destino: todo el canvas
+        )
+      } else if (captureResolution.strategy === 'crop_vertical') {
+        // 🔧 Caso 3: Crop vertical (video más alto)
+        console.log('🔧 Aplicando crop vertical inteligente')
+        ctx.drawImage(
+          videoElement,
+          0,
+          captureResolution.cropY,
+          captureResolution.width,
+          captureResolution.height, // fuente: crop vertical
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height // destino: todo el canvas
         )
       } else {
-        // Comportamiento normal para desktop
+        // 🖥️ Caso 4: Desktop o fallback
+        console.log('🖥️ Usando lógica de desktop/fallback')
         ctx.drawImage(videoElement, 0, 0, captureResolution.width, captureResolution.height)
       }
     }
 
-    // 2. Intentar capturar elementos AR
+    // 2. Capturar elementos AR encima
     const arElements = this.sceneRef.current?.querySelectorAll('canvas')
     if (arElements) {
       for (let element of arElements) {
@@ -78,11 +108,14 @@ export class RendererCaptureStrategy extends CaptureStrategy {
     const renderer = this.arManagerRef.current?.renderer
     if (!renderer) return null
 
-    // Obtener dimensiones correctas para la captura
+    // Obtener dimensiones correctas para la captura usando la nueva lógica
     const captureResolution = this.arManagerRef.current?.getCaptureResolution?.() || {
       width: this.dimensions.width,
       height: this.dimensions.height,
+      strategy: 'fallback',
     }
+
+    console.log('📸 RendererCapture con nueva lógica:', captureResolution)
 
     // Forzar renderizado antes de capturar
     renderer.render(this.arManagerRef.current.scene, this.arManagerRef.current.camera)
@@ -95,14 +128,40 @@ export class RendererCaptureStrategy extends CaptureStrategy {
     finalCanvas.height = captureResolution.height
     const ctx = finalCanvas.getContext('2d')
 
-    // Primero el video de fondo
+    // Primero el video de fondo usando la nueva lógica
     const videoElement = this.sceneRef.current?.querySelector('video')
     if (videoElement && videoElement.videoWidth > 0) {
-      if (captureResolution.cropX !== undefined && captureResolution.cropY !== undefined) {
-        // Para móviles con crop
+      if (captureResolution.strategy === 'full_video') {
+        // ✅ Usar toda la imagen del video
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'crop_horizontal') {
+        // 🔧 Crop horizontal
         ctx.drawImage(
           videoElement,
           captureResolution.cropX,
+          0,
+          captureResolution.width,
+          captureResolution.height,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'crop_vertical') {
+        // 🔧 Crop vertical
+        ctx.drawImage(
+          videoElement,
+          0,
           captureResolution.cropY,
           captureResolution.width,
           captureResolution.height,
@@ -112,7 +171,7 @@ export class RendererCaptureStrategy extends CaptureStrategy {
           captureResolution.height
         )
       } else {
-        // Para desktop
+        // 🖥️ Desktop/fallback
         ctx.drawImage(videoElement, 0, 0, captureResolution.width, captureResolution.height)
       }
     }
@@ -139,11 +198,14 @@ export class WebGLCaptureStrategy extends CaptureStrategy {
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
     if (!gl) return null
 
-    // Obtener dimensiones correctas para la captura
+    // Obtener dimensiones correctas para la captura usando la nueva lógica
     const captureResolution = this.arManagerRef.current?.getCaptureResolution?.() || {
       width: this.dimensions.width,
       height: this.dimensions.height,
+      strategy: 'fallback',
     }
+
+    console.log('📸 WebGLCapture con nueva lógica:', captureResolution)
 
     // Crear canvas de composición con las dimensiones correctas
     const compositeCanvas = document.createElement('canvas')
@@ -151,14 +213,40 @@ export class WebGLCaptureStrategy extends CaptureStrategy {
     compositeCanvas.height = captureResolution.height
     const ctx = compositeCanvas.getContext('2d')
 
-    // Fondo de video
+    // Fondo de video usando la nueva lógica
     const videoElement = this.sceneRef.current?.querySelector('video')
     if (videoElement && videoElement.videoWidth > 0) {
-      if (captureResolution.cropX !== undefined && captureResolution.cropY !== undefined) {
-        // Para móviles con crop
+      if (captureResolution.strategy === 'full_video') {
+        // ✅ Usar toda la imagen del video
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'crop_horizontal') {
+        // 🔧 Crop horizontal
         ctx.drawImage(
           videoElement,
           captureResolution.cropX,
+          0,
+          captureResolution.width,
+          captureResolution.height,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'crop_vertical') {
+        // 🔧 Crop vertical
+        ctx.drawImage(
+          videoElement,
+          0,
           captureResolution.cropY,
           captureResolution.width,
           captureResolution.height,
@@ -168,7 +256,7 @@ export class WebGLCaptureStrategy extends CaptureStrategy {
           captureResolution.height
         )
       } else {
-        // Para desktop
+        // 🖥️ Desktop/fallback
         ctx.drawImage(videoElement, 0, 0, captureResolution.width, captureResolution.height)
       }
     }
@@ -214,13 +302,93 @@ export class CameraOnlyCaptureStrategy extends CaptureStrategy {
   }
 
   async capture() {
-    // Obtener dimensiones correctas para la captura
+    // Usar el stream existente del ARManager si está disponible
+    const existingStream = this.arManagerRef.current?.cameraConfig?.mediaStream
+
+    if (existingStream && existingStream.active) {
+      console.log('📹 Usando stream existente para captura')
+      return this.captureFromExistingStream(existingStream)
+    }
+
+    // Si no hay stream, crear uno nuevo
+    console.log('📹 Creando nuevo stream para captura')
+    return this.captureFromNewStream()
+  }
+
+  async captureFromExistingStream() {
     const captureResolution = this.arManagerRef.current?.getCaptureResolution?.() || {
       width: this.dimensions.width,
       height: this.dimensions.height,
+      strategy: 'fallback',
+    }
+
+    console.log('📸 CameraOnly con stream existente:', captureResolution)
+
+    // Usar el video element existente
+    const videoElement = this.sceneRef.current?.querySelector('video')
+    if (videoElement && videoElement.videoWidth > 0) {
+      const canvas = document.createElement('canvas')
+      canvas.width = captureResolution.width
+      canvas.height = captureResolution.height
+      const ctx = canvas.getContext('2d')
+
+      // Aplicar la misma lógica que en las otras estrategias
+      if (captureResolution.strategy === 'full_video') {
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'crop_horizontal') {
+        ctx.drawImage(
+          videoElement,
+          captureResolution.cropX,
+          0,
+          captureResolution.width,
+          captureResolution.height,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else if (captureResolution.strategy === 'crop_vertical') {
+        ctx.drawImage(
+          videoElement,
+          0,
+          captureResolution.cropY,
+          captureResolution.width,
+          captureResolution.height,
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height
+        )
+      } else {
+        ctx.drawImage(videoElement, 0, 0, captureResolution.width, captureResolution.height)
+      }
+
+      return canvas.toDataURL('image/jpeg', 0.9)
+    }
+
+    // Fallback al método original
+    return this.captureFromNewStream()
+  }
+
+  async captureFromNewStream() {
+    const captureResolution = this.arManagerRef.current?.getCaptureResolution?.() || {
+      width: this.dimensions.width,
+      height: this.dimensions.height,
+      strategy: 'fallback',
     }
 
     const isMobile = this.dimensions.width <= 768
+    const screenAspectRatio = this.dimensions.width / this.dimensions.height
 
     let cameraConstraints = {
       video: {
@@ -231,27 +399,27 @@ export class CameraOnlyCaptureStrategy extends CaptureStrategy {
     }
 
     if (isMobile) {
-      // Para móviles, usar constraints más específicos
-      const screenAspectRatio = this.dimensions.width / this.dimensions.height
-
+      // Para móviles, usar las mismas constraints que en setupImprovedMobileCamera
       cameraConstraints = {
         video: {
           facingMode: 'environment',
+          aspectRatio: { exact: screenAspectRatio },
           width: {
-            min: 480,
-            ideal: Math.min(captureResolution.width, 1920),
-            max: 1920,
+            min: this.dimensions.width,
+            ideal: this.dimensions.width * 2,
+            max: this.dimensions.width * 3,
           },
           height: {
-            min: 640,
-            ideal: Math.min(captureResolution.height, 1920),
-            max: 1920,
+            min: this.dimensions.height,
+            ideal: this.dimensions.height * 2,
+            max: this.dimensions.height * 3,
           },
-          aspectRatio: { ideal: screenAspectRatio },
           frameRate: { ideal: 30 },
         },
       }
     }
+
+    console.log('📹 CameraOnly - nuevo stream con constraints:', cameraConstraints)
 
     const stream = await navigator.mediaDevices.getUserMedia(cameraConstraints)
 
@@ -268,12 +436,28 @@ export class CameraOnlyCaptureStrategy extends CaptureStrategy {
     canvas.height = captureResolution.height
     const ctx = canvas.getContext('2d')
 
-    // Para móviles, aplicar el mismo crop que se usa en la vista
-    if (isMobile && captureResolution.cropX !== undefined && captureResolution.cropY !== undefined) {
+    // Aplicar la misma lógica de crop/scale
+    if (captureResolution.strategy === 'full_video') {
+      ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, captureResolution.width, captureResolution.height)
+    } else if (captureResolution.strategy === 'crop_horizontal') {
+      const cropX = Math.round((video.videoWidth - captureResolution.width) / 2)
       ctx.drawImage(
         video,
-        captureResolution.cropX,
-        captureResolution.cropY,
+        cropX,
+        0,
+        captureResolution.width,
+        captureResolution.height,
+        0,
+        0,
+        captureResolution.width,
+        captureResolution.height
+      )
+    } else if (captureResolution.strategy === 'crop_vertical') {
+      const cropY = Math.round((video.videoHeight - captureResolution.height) / 2)
+      ctx.drawImage(
+        video,
+        0,
+        cropY,
         captureResolution.width,
         captureResolution.height,
         0,
@@ -285,6 +469,7 @@ export class CameraOnlyCaptureStrategy extends CaptureStrategy {
       ctx.drawImage(video, 0, 0, captureResolution.width, captureResolution.height)
     }
 
+    // Limpiar el stream temporal
     stream.getTracks().forEach((track) => track.stop())
 
     return canvas.toDataURL('image/jpeg', 0.9)

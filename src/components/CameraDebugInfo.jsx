@@ -1,14 +1,15 @@
-// src/components/CameraDebugInfo.jsx
+// src/components/CameraDebugInfo.jsx - Mejorado con nueva lógica
 import { useState, useEffect } from 'react'
 
 const CameraDebugInfo = ({ arManagerRef, show = false }) => {
   const [debugInfo, setDebugInfo] = useState({
     screen: { width: 0, height: 0, aspectRatio: 0 },
     video: { width: 0, height: 0, aspectRatio: 0 },
-    capture: { width: 0, height: 0, cropX: 0, cropY: 0 },
+    capture: { width: 0, height: 0, strategy: 'unknown' },
     orientation: 'unknown',
     devicePixelRatio: 1,
     cameraConfig: null,
+    actualConstraints: null,
   })
 
   useEffect(() => {
@@ -23,7 +24,8 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
       let videoHeight = 0
       let videoAspectRatio = 0
       let cameraConfig = null
-      let captureResolution = { width: screenWidth, height: screenHeight }
+      let actualConstraints = null
+      let captureResolution = { width: screenWidth, height: screenHeight, strategy: 'fallback' }
 
       // Buscar el elemento de video
       const videoElement = document.querySelector('video') || arManagerRef.current?.videoElement
@@ -36,9 +38,10 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
       // Obtener configuración de la cámara del ARManager
       if (arManagerRef.current?.cameraConfig) {
         cameraConfig = arManagerRef.current.cameraConfig
+        actualConstraints = cameraConfig.actualConstraints
       }
 
-      // Obtener resolución de captura
+      // Obtener resolución de captura con nueva lógica
       if (arManagerRef.current?.getCaptureResolution) {
         captureResolution = arManagerRef.current.getCaptureResolution()
       }
@@ -56,15 +59,11 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
           height: videoHeight,
           aspectRatio: videoAspectRatio,
         },
-        capture: {
-          width: captureResolution.width || 0,
-          height: captureResolution.height || 0,
-          cropX: captureResolution.cropX || 0,
-          cropY: captureResolution.cropY || 0,
-        },
+        capture: captureResolution,
         orientation,
         devicePixelRatio: window.devicePixelRatio || 1,
         cameraConfig,
+        actualConstraints,
       })
     }
 
@@ -80,7 +79,7 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
 
     try {
       const captureRes = arManagerRef.current.getCaptureResolution()
-      console.log('🔧 Test de captura:', captureRes)
+      console.log('🔧 Test de captura con nueva lógica:', captureRes)
 
       // Crear canvas de prueba
       const testCanvas = document.createElement('canvas')
@@ -88,24 +87,54 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
       testCanvas.height = captureRes.height
       const ctx = testCanvas.getContext('2d')
 
-      // Dibujar información de prueba
+      // Fondo
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, captureRes.width, captureRes.height)
 
+      // Información de prueba
       ctx.fillStyle = '#fff'
-      ctx.font = '20px Arial'
+      ctx.font = `${Math.min(captureRes.width, captureRes.height) / 20}px Arial`
       ctx.textAlign = 'center'
-      ctx.fillText(`${captureRes.width}x${captureRes.height}`, captureRes.width / 2, captureRes.height / 2)
 
-      if (captureRes.cropX !== undefined) {
+      const centerX = captureRes.width / 2
+      const centerY = captureRes.height / 2
+      const lineHeight = Math.min(captureRes.width, captureRes.height) / 15
+
+      ctx.fillText(`${captureRes.width}x${captureRes.height}`, centerX, centerY - lineHeight)
+      ctx.fillText(`Estrategia: ${captureRes.strategy}`, centerX, centerY)
+
+      if (captureRes.cropX !== undefined || captureRes.cropY !== undefined) {
         ctx.fillStyle = '#ff0'
-        ctx.fillText(`Crop: ${captureRes.cropX},${captureRes.cropY}`, captureRes.width / 2, captureRes.height / 2 + 30)
+        ctx.fillText(`Crop: ${captureRes.cropX || 0},${captureRes.cropY || 0}`, centerX, centerY + lineHeight)
       }
+
+      if (captureRes.note) {
+        ctx.fillStyle = '#0f0'
+        ctx.font = `${Math.min(captureRes.width, captureRes.height) / 30}px Arial`
+        ctx.fillText(captureRes.note, centerX, centerY + lineHeight * 2)
+      }
+
+      // Bordes para identificar el área
+      ctx.strokeStyle = '#f00'
+      ctx.lineWidth = 4
+      ctx.strokeRect(2, 2, captureRes.width - 4, captureRes.height - 4)
 
       // Mostrar canvas de prueba
       const dataURL = testCanvas.toDataURL('image/jpeg', 0.9)
       const newWindow = window.open()
-      newWindow.document.write(`<img src="${dataURL}" style="max-width:100%; max-height:100%;">`)
+      newWindow.document.write(`
+        <html>
+          <head><title>Test de Captura - ${captureRes.strategy}</title></head>
+          <body style="margin:0; background:#333; display:flex; justify-content:center; align-items:center; min-height:100vh;">
+            <div style="text-align:center; color:white;">
+              <h2>Test de Captura</h2>
+              <p>Estrategia: ${captureRes.strategy}</p>
+              <p>Resolución: ${captureRes.width}x${captureRes.height}</p>
+              <img src="${dataURL}" style="max-width:90vw; max-height:70vh; border:2px solid #fff;">
+            </div>
+          </body>
+        </html>
+      `)
     } catch (error) {
       console.error('Error en test de captura:', error)
     }
@@ -116,9 +145,12 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
   const getAspectRatioStatus = () => {
     const screenAR = debugInfo.screen.aspectRatio
     const videoAR = debugInfo.video.aspectRatio
+    const diff = Math.abs(screenAR - videoAR)
 
-    if (Math.abs(screenAR - videoAR) < 0.1) {
-      return { status: '✅ Perfecta', color: 'text-green-400' }
+    if (diff < 0.05) {
+      return { status: '✅ Excelente', color: 'text-green-400' }
+    } else if (diff < 0.1) {
+      return { status: '✅ Buena', color: 'text-green-300' }
     } else if (videoAR > screenAR) {
       return { status: '⚠️ Video más ancho', color: 'text-yellow-400' }
     } else {
@@ -126,13 +158,30 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
     }
   }
 
+  const getStrategyStatus = () => {
+    const strategy = debugInfo.capture.strategy
+    switch (strategy) {
+      case 'full_video':
+        return { icon: '✅', color: 'text-green-400', desc: 'Óptimo: Sin crop' }
+      case 'crop_horizontal':
+        return { icon: '🔧', color: 'text-yellow-400', desc: 'Crop horizontal' }
+      case 'crop_vertical':
+        return { icon: '🔧', color: 'text-orange-400', desc: 'Crop vertical' }
+      case 'desktop':
+        return { icon: '🖥️', color: 'text-blue-400', desc: 'Modo desktop' }
+      default:
+        return { icon: '❓', color: 'text-gray-400', desc: 'Desconocido' }
+    }
+  }
+
   const aspectRatioStatus = getAspectRatioStatus()
+  const strategyStatus = getStrategyStatus()
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 bg-black bg-opacity-90 text-white p-4 rounded-lg text-xs font-mono max-w-xs backdrop-blur-sm border border-gray-600">
+    <div className="fixed bottom-4 left-4 z-50 bg-black bg-opacity-95 text-white p-3 rounded-lg text-xs font-mono max-w-xs backdrop-blur-sm border border-gray-600 max-h-96 overflow-y-auto">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-bold text-yellow-400">📹 Camera Debug</h4>
-        <button onClick={testCapture} className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs">
+        <h4 className="font-bold text-yellow-400">📹 Camera Debug v2</h4>
+        <button onClick={testCapture} className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs transition-colors">
           Test
         </button>
       </div>
@@ -144,7 +193,7 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
           <div>
             Tamaño: {debugInfo.screen.width}x{debugInfo.screen.height}
           </div>
-          <div>Ratio: {debugInfo.screen.aspectRatio.toFixed(2)}</div>
+          <div>AR: {debugInfo.screen.aspectRatio.toFixed(3)}</div>
           <div>Orientación: {debugInfo.orientation}</div>
           <div>DPR: {debugInfo.devicePixelRatio}</div>
         </div>
@@ -155,50 +204,66 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
           <div>
             Tamaño: {debugInfo.video.width}x{debugInfo.video.height}
           </div>
-          <div>Ratio: {debugInfo.video.aspectRatio.toFixed(2)}</div>
+          <div>AR: {debugInfo.video.aspectRatio.toFixed(3)}</div>
           <div className={aspectRatioStatus.color}>{aspectRatioStatus.status}</div>
+          <div className="text-xs text-gray-400">
+            Diff: {Math.abs(debugInfo.video.aspectRatio - debugInfo.screen.aspectRatio).toFixed(3)}
+          </div>
+        </div>
+
+        {/* Nueva sección: Estrategia de captura */}
+        <div className="border-b border-gray-600 pb-2">
+          <div className="text-purple-400 font-semibold">🎯 Estrategia</div>
+          <div className={`flex items-center gap-1 ${strategyStatus.color}`}>
+            <span>{strategyStatus.icon}</span>
+            <span>{debugInfo.capture.strategy}</span>
+          </div>
+          <div className={`text-xs ${strategyStatus.color}`}>{strategyStatus.desc}</div>
         </div>
 
         {/* Información de captura */}
         <div className="border-b border-gray-600 pb-2">
-          <div className="text-purple-400 font-semibold">📸 Captura</div>
+          <div className="text-purple-400 font-semibold">📸 Captura Final</div>
           <div>
             Tamaño: {debugInfo.capture.width}x{debugInfo.capture.height}
           </div>
-          {debugInfo.capture.cropX > 0 || debugInfo.capture.cropY > 0 ? (
-            <div className="text-yellow-400">
-              Crop: {debugInfo.capture.cropX},{debugInfo.capture.cropY}
-            </div>
-          ) : (
-            <div className="text-gray-400">Sin crop</div>
-          )}
+
+          {debugInfo.capture.cropX > 0 && <div className="text-yellow-400">CropX: {debugInfo.capture.cropX}</div>}
+          {debugInfo.capture.cropY > 0 && <div className="text-yellow-400">CropY: {debugInfo.capture.cropY}</div>}
+
+          {debugInfo.capture.note && <div className="text-xs text-green-300 mt-1 leading-tight">💡 {debugInfo.capture.note}</div>}
         </div>
 
-        {/* Configuración de cámara */}
-        {debugInfo.cameraConfig && (
-          <div>
-            <div className="text-orange-400 font-semibold">⚙️ Config</div>
-            <div>Móvil: {debugInfo.cameraConfig.isMobile ? 'Sí' : 'No'}</div>
-            {debugInfo.cameraConfig.actualResolution?.width && (
-              <div>
-                Real: {debugInfo.cameraConfig.actualResolution.width}x{debugInfo.cameraConfig.actualResolution.height}
-              </div>
-            )}
+        {/* Configuración de cámara real */}
+        {debugInfo.actualConstraints && (
+          <div className="border-b border-gray-600 pb-2">
+            <div className="text-orange-400 font-semibold">⚙️ Config Real</div>
+            <div>W: {debugInfo.actualConstraints.width}</div>
+            <div>H: {debugInfo.actualConstraints.height}</div>
+            {debugInfo.actualConstraints.aspectRatio && <div>AR: {debugInfo.actualConstraints.aspectRatio.toFixed(3)}</div>}
+            <div>FPS: {debugInfo.actualConstraints.frameRate || 'N/A'}</div>
           </div>
         )}
 
-        {/* Recomendaciones */}
-        <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-600">
-          {debugInfo.video.aspectRatio > debugInfo.screen.aspectRatio + 0.1 && (
-            <div className="text-yellow-300">💡 Video se recorta en los lados</div>
+        {/* Estado general */}
+        <div className="text-xs text-gray-400 pt-2">
+          <div className="font-semibold text-white mb-1">Estado:</div>
+
+          {debugInfo.capture.strategy === 'full_video' && <div className="text-green-300">✨ Configuración óptima</div>}
+
+          {debugInfo.capture.strategy.includes('crop') && <div className="text-yellow-300">🔧 Crop aplicado correctamente</div>}
+
+          {Math.abs(debugInfo.video.aspectRatio - debugInfo.screen.aspectRatio) < 0.05 && (
+            <div className="text-green-300">🎯 Aspect ratios coinciden</div>
           )}
-          {debugInfo.video.aspectRatio < debugInfo.screen.aspectRatio - 0.1 && (
-            <div className="text-yellow-300">💡 Video se recorta arriba/abajo</div>
-          )}
-          {Math.abs(debugInfo.video.aspectRatio - debugInfo.screen.aspectRatio) < 0.1 && (
-            <div className="text-green-300">✨ Aspect ratio óptimo</div>
-          )}
+
+          {debugInfo.cameraConfig?.isMobile && <div className="text-blue-300">📱 Modo móvil activo</div>}
         </div>
+
+        {/* Indicadores de problemas */}
+        {debugInfo.video.aspectRatio > 0 && Math.abs(debugInfo.video.aspectRatio - debugInfo.screen.aspectRatio) > 0.2 && (
+          <div className="text-red-300 text-xs mt-2 p-1 bg-red-900 bg-opacity-30 rounded">⚠️ Gran diferencia en aspect ratios</div>
+        )}
       </div>
     </div>
   )
