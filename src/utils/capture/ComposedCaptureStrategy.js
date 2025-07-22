@@ -77,6 +77,20 @@ export class ComposedCaptureStrategy extends CaptureStrategy {
           captureResolution.width,
           captureResolution.height // destino: escalado al tamaño calculado
         )
+      } else if (captureResolution.strategy === 'mobile_extreme_scale_fixed') {
+        // 🎯 Caso 4B: Escalado FIJO a dimensiones exactas de pantalla (móvil)
+        console.log('🎯 MÓVIL FIXED: Escalado exacto a dimensiones de pantalla')
+        ctx.drawImage(
+          videoElement,
+          0,
+          0,
+          captureResolution.videoWidth,
+          captureResolution.videoHeight, // fuente: todo el video original
+          0,
+          0,
+          captureResolution.width,
+          captureResolution.height // destino: escalado EXACTO a pantalla
+        )
       } else if (captureResolution.strategy === 'mobile_scale_to_screen') {
         // 📐 Caso 5: Escalado directo a pantalla (móvil - evitar crops excesivos)
         console.log('📐 MÓVIL: Escalado directo a dimensiones de pantalla')

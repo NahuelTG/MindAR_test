@@ -169,6 +169,8 @@ const CameraDebugInfo = ({ arManagerRef, show = false }) => {
         return { icon: '🔧', color: 'text-orange-400', desc: 'MÓVIL: Crop vertical centrado' }
       case 'mobile_extreme_scale':
         return { icon: '🚨', color: 'text-red-400', desc: 'MÓVIL: Escalado para caso extremo' }
+      case 'mobile_extreme_scale_fixed':
+        return { icon: '🎯', color: 'text-green-400', desc: 'MÓVIL FIXED: Escalado exacto a pantalla' }
       case 'mobile_scale_to_screen':
         return { icon: '📐', color: 'text-blue-400', desc: 'MÓVIL: Escalado a pantalla (anti-crop)' }
       // Estrategias legacy
