@@ -141,26 +141,25 @@ export class ARManager {
 
       console.log(`🎯 Configurando cámara para: ${screenWidth}x${screenHeight} (AR: ${screenAspectRatio.toFixed(3)})`)
 
-      // ============ NUEVA LÓGICA DE CONSTRAINTS ============
+      // ============ CONSTRAINTS MEJORADOS PARA EVITAR ASPECT RATIOS EXTREMOS ============
       let cameraConstraints
 
       if (isMobile) {
-        // Para móviles: usar el MISMO aspect ratio que la pantalla
+        // Para móviles: usar constraints más flexibles
         cameraConstraints = {
           video: {
             facingMode: 'environment',
-            // Usar exactamente el mismo aspect ratio que la pantalla
-            aspectRatio: { exact: screenAspectRatio },
-            // Resoluciones que respeten este aspect ratio
+            // NO forzar exact, usar ideal para más flexibilidad
+            aspectRatio: { ideal: screenAspectRatio },
             width: {
               min: screenWidth,
-              ideal: screenWidth * 2, // 2x para mejor calidad
-              max: screenWidth * 3,
+              ideal: screenWidth * 1.5, // Menos agresivo
+              max: screenWidth * 2, // Límite más conservador
             },
             height: {
               min: screenHeight,
-              ideal: screenHeight * 2, // 2x para mejor calidad
-              max: screenHeight * 3,
+              ideal: screenHeight * 1.5, // Menos agresivo
+              max: screenHeight * 2, // Límite más conservador
             },
             frameRate: { ideal: 30, max: 60 },
           },
@@ -177,7 +176,7 @@ export class ARManager {
         }
       }
 
-      console.log('📹 Camera constraints:', cameraConstraints)
+      console.log('📹 Camera constraints (optimizados):', cameraConstraints)
 
       const stream = await navigator.mediaDevices.getUserMedia(cameraConstraints)
 
@@ -283,7 +282,7 @@ export class ARManager {
     }
   }
 
-  // ============ MÉTODO DE CAPTURA COMPLETAMENTE REESCRITO ============
+  // ============ MÉTODO DE CAPTURA MEJORADO (MANEJO DE CASOS EXTREMOS) ============
   getCaptureResolution() {
     if (!this.videoElement || !this.cameraConfig.actualResolution.width) {
       return {
@@ -304,17 +303,17 @@ export class ARManager {
       const screenHeight = this.currentDimensions.height
       const screenAspectRatio = screenWidth / screenHeight
 
-      console.log(`🔍 Calculando captura móvil:`)
+      console.log(`🔍 Análisis de captura móvil:`)
       console.log(`   📹 Video: ${videoWidth}x${videoHeight} (AR: ${videoAspectRatio.toFixed(3)})`)
       console.log(`   📱 Pantalla: ${screenWidth}x${screenHeight} (AR: ${screenAspectRatio.toFixed(3)})`)
 
-      // ============ NUEVA LÓGICA: NO HAY CROP, USAR TODO EL VIDEO ============
-      // Si conseguimos el aspect ratio correcto, usar toda la imagen
       const aspectRatioDiff = Math.abs(videoAspectRatio - screenAspectRatio)
+      console.log(`   🎯 Diferencia AR: ${aspectRatioDiff.toFixed(3)}`)
 
-      if (aspectRatioDiff < 0.05) {
-        // Tolerance de 5%
-        console.log('✅ Aspect ratios coinciden, usar toda la imagen')
+      // ============ LÓGICA MEJORADA PARA CASOS EXTREMOS ============
+      if (aspectRatioDiff < 0.1) {
+        // Tolerance aumentada al 10%
+        console.log('✅ Aspect ratios son suficientemente similares')
         return {
           width: videoWidth,
           height: videoHeight,
@@ -323,45 +322,135 @@ export class ARManager {
           videoHeight,
           cropX: 0,
           cropY: 0,
-          note: 'Usando toda la imagen del video sin crop',
+          note: 'AR similares: usando toda la imagen',
         }
-      } else {
-        console.log('⚠️ Aspect ratios difieren, aplicar crop inteligente')
+      }
 
-        // Determinar cuál dimensión limita
-        if (videoAspectRatio > screenAspectRatio) {
-          // Video más ancho: crop horizontal (mantener altura)
-          const newWidth = Math.round(videoHeight * screenAspectRatio)
-          const cropX = Math.round((videoWidth - newWidth) / 2)
+      // ============ CASOS EXTREMOS: MUY DIFERENTES ============
+      else if (aspectRatioDiff > 1.0) {
+        // Diferencia muy grande (como 2.012 vs 0.497)
+        console.log('🚨 Aspect ratios MUY diferentes, usando estrategia conservadora')
 
-          console.log(`🔧 Crop horizontal: ${newWidth}x${videoHeight}, cropX: ${cropX}`)
+        // Para casos extremos: usar las dimensiones de pantalla y adaptar del video
+        // Esto evita crops extremos que causan deformación
+
+        // Calcular qué dimensión del video usar como base
+        const screenArea = screenWidth * screenHeight
+        const videoArea = videoWidth * videoHeight
+
+        if (videoArea > screenArea * 4) {
+          // Video mucho más grande
+          console.log('📐 Video muy grande, escalando a tamaño de pantalla')
+
+          // Escalar proporcionalmente para que quepa en la pantalla
+          let newWidth, newHeight
+
+          if (videoAspectRatio > screenAspectRatio) {
+            // Video más ancho: ajustar por altura de pantalla
+            newHeight = screenHeight
+            newWidth = Math.round(newHeight * videoAspectRatio)
+
+            // Si el ancho resultante es demasiado grande, limitar
+            if (newWidth > screenWidth * 2) {
+              newWidth = screenWidth
+              newHeight = Math.round(newWidth / videoAspectRatio)
+            }
+          } else {
+            // Video más alto: ajustar por ancho de pantalla
+            newWidth = screenWidth
+            newHeight = Math.round(newWidth / videoAspectRatio)
+
+            // Si la altura resultante es demasiado grande, limitar
+            if (newHeight > screenHeight * 2) {
+              newHeight = screenHeight
+              newWidth = Math.round(newHeight * videoAspectRatio)
+            }
+          }
 
           return {
             width: newWidth,
+            height: newHeight,
+            strategy: 'extreme_scale',
+            videoWidth,
+            videoHeight,
+            cropX: 0,
+            cropY: 0,
+            note: `Caso extremo: escalado a ${newWidth}x${newHeight}`,
+          }
+        }
+      }
+
+      // ============ CASOS NORMALES CON MEJORAS ============
+      else {
+        console.log('🔧 Aplicando crop inteligente mejorado')
+
+        if (videoAspectRatio > screenAspectRatio) {
+          // Video más ancho: crop horizontal CENTRADO
+          const targetWidth = Math.round(videoHeight * screenAspectRatio)
+          const cropX = Math.round((videoWidth - targetWidth) / 2)
+
+          // Verificar que el crop no sea excesivo (> 40% del video)
+          const cropPercentage = (cropX * 2) / videoWidth
+
+          if (cropPercentage > 0.4) {
+            console.log('⚠️ Crop horizontal excesivo, usando escalado')
+            return {
+              width: screenWidth,
+              height: screenHeight,
+              strategy: 'scale_to_screen',
+              videoWidth,
+              videoHeight,
+              cropX: 0,
+              cropY: 0,
+              note: `Evitando crop excesivo (${(cropPercentage * 100).toFixed(1)}%)`,
+            }
+          }
+
+          console.log(`🔧 Crop horizontal: ${targetWidth}x${videoHeight}, cropX: ${cropX}`)
+
+          return {
+            width: targetWidth,
             height: videoHeight,
             strategy: 'crop_horizontal',
             videoWidth,
             videoHeight,
             cropX,
             cropY: 0,
-            note: `Crop horizontal de ${cropX}px por lado`,
+            note: `Crop horizontal centrado: ${cropX}px por lado`,
           }
         } else {
-          // Video más alto: crop vertical (mantener ancho)
-          const newHeight = Math.round(videoWidth / screenAspectRatio)
-          const cropY = Math.round((videoHeight - newHeight) / 2)
+          // Video más alto: crop vertical CENTRADO
+          const targetHeight = Math.round(videoWidth / screenAspectRatio)
+          const cropY = Math.round((videoHeight - targetHeight) / 2)
 
-          console.log(`🔧 Crop vertical: ${videoWidth}x${newHeight}, cropY: ${cropY}`)
+          // Verificar que el crop no sea excesivo
+          const cropPercentage = (cropY * 2) / videoHeight
+
+          if (cropPercentage > 0.4) {
+            console.log('⚠️ Crop vertical excesivo, usando escalado')
+            return {
+              width: screenWidth,
+              height: screenHeight,
+              strategy: 'scale_to_screen',
+              videoWidth,
+              videoHeight,
+              cropX: 0,
+              cropY: 0,
+              note: `Evitando crop excesivo (${(cropPercentage * 100).toFixed(1)}%)`,
+            }
+          }
+
+          console.log(`🔧 Crop vertical: ${videoWidth}x${targetHeight}, cropY: ${cropY}`)
 
           return {
             width: videoWidth,
-            height: newHeight,
+            height: targetHeight,
             strategy: 'crop_vertical',
             videoWidth,
             videoHeight,
             cropX: 0,
             cropY,
-            note: `Crop vertical de ${cropY}px arriba y abajo`,
+            note: `Crop vertical centrado: ${cropY}px arriba y abajo`,
           }
         }
       }
