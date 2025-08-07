@@ -26,7 +26,7 @@ const ARScene = () => {
 
   const { isStaticMode, toggleStaticMode, resetObjectPosition } = useARControls(arManagerRef)
 
-  const { capturePhoto, isCapturing } = useARCapture(arManagerRef, sceneRef, dimensions)
+  const { capturePhoto } = useARCapture(arManagerRef, sceneRef, dimensions)
 
   // Estado para el juego interactivo
   const [currentGameAnimation, setCurrentGameAnimation] = useState(null)
@@ -272,7 +272,7 @@ const ARScene = () => {
 
       {!loading && (
         <>
-          <CaptureButton onCapture={capturePhoto} isCapturing={isCapturing} isMobile={isMobile} />
+          <CaptureButton arManagerRef={arManagerRef} sceneRef={sceneRef} isMobile={isMobile} />
 
           <ARControls
             isStaticMode={isStaticMode}
